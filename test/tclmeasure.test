@@ -1,0 +1,62 @@
+package require tcltest
+namespace import ::tcltest::*
+package require gnuplotutil
+namespace import ::gnuplotutil::*
+package require tclmeasure
+namespace import ::tclmeasure::*
+package require math::constants
+::math::constants::constants radtodeg degtorad pi
+
+for {set i 0} {$i<=1000} {incr i} {
+    set xi [= {$i*0.05}]
+    lappend x $xi
+    lappend y1 [= {sin($xi)}]
+    lappend y2 [= {cos($xi)}]
+}
+
+for {set i -500} {$i<=500} {incr i} {
+    set xi [= {$i*0.05}]
+    lappend xsym $xi
+    lappend y1sym [= {sin($xi)}]
+    lappend y2sym [= {cos($xi)}]
+}
+#plotXYN $x -columns $y1 $y2
+### TrigTarg tests
+test TrigTargTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
+                  -targ {-vec y2 -val 0.5 -fall 5}]
+} -result {xtrig 12.666567432668222 xtarg 26.17976390163929 xdelta 13.513196468971069}
+
+test TrigTargTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.7 -rise 2}\
+                  -targ {-at 20.0}]
+} -result {xtrig 7.058761869929844 xtarg 20.0 xdelta 12.941238130070156}
+
+test TrigTargTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-at 5.01}\
+                    -targ {-vec y2 -val 0.5 -cross 2}]
+} -result {xtrig 5.01 xtarg 5.236130584737532 xdelta 0.22613058473753256}
+
+test TrigTargTest-4 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec x -val 5.01 -rise 1}\
+                  -targ {-vec y2 -val 0.5 -fall last}]
+} -result {xtrig 5.01 xtarg 45.029318738629485 xdelta 40.01931873862949}
+
+test TrigTargTest-5 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise last}\
+                  -targ {-vec y2 -val 0.5 -fall last}]
+} -result {xtrig 44.08249174375871 xtarg 45.029318738629485 xdelta 0.9468269948707757}
+
+test TrigTargTest-6 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise last}\
+                   -targ {-vec y2 -val 2.0 -fall last}} errorStr
+    return $errorStr
+} -result {Targ value '2.000000' with conditions 'fall last delay=0.000000' was not found}
+
+test TrigTargTest-7 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise last}\
+                   -targ {-vec y2 -val -0.1 -fall 20}} errorStr
+    return $errorStr
+} -result {Targ value '-0.100000' with conditions 'fall 20 delay=0.000000' was not found}
+
+cleanupTests
