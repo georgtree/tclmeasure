@@ -170,5 +170,138 @@ test FindWhenTest-22 {} -body {
     return $errorStr
 } -result {Cross between vectors with conditions 'fall 20 delay=0.000000 from=-5.000000 to=30.000000' was not found}
 
+### DerivWhen tests
+test DerivWhenTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec y2 -val 1 -cross 1}]
+} -result 1.0008326043588514
+
+test DerivWhenTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec y2 -val 1 -cross last}]
+} -result 1.0008326043588514
+
+test DerivWhenTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec1 y1 -vec2 y2 -fall 5}]
+} -result -0.6961561896724078
+
+test DerivWhenTest-4 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y2 -when {-vec y1 -val 0.1 -rise 2}]
+} -result -0.09167619818982331
+
+test DerivAtTest-5 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -when {-vec y1 -val 24.9999 -rise 1}]
+} -result 9.0 -cleanup {
+    unset xloc yloc
+}
+
+test DerivAtTest-6 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -when {-vec y1 -val 1 -rise 1}]
+} -result 2.0 -cleanup {
+    unset xloc yloc
+}
+
+### FindAt tests
+test FindAtTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5]
+} -result -0.9589242746631385
+
+test FindAtTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at [@ $x end]]
+} -result -0.26237485370392877
+
+test FindAtTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at [@ $x 0]]
+} -result 0.0
+
+test FindAtTest-4 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5.81946]
+} -result -0.44715116692919593
+
+test FindAtTest-5 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 500} errorStr
+    return $errorStr
+} -result {Value of the vector at '500.000000' was not found}
+
+### DerivAt tests
+test DerivAtTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5]
+} -result 0.2835440076591418
+
+test DerivAtTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at [@ $x end]]
+} -result 0.9657612676151004
+
+test DerivAtTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at [@ $x 0]]
+} -result 1.0008326043588514
+
+test DerivAtTest-4 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5.81946]
+} -result 0.8967632314779559
+
+test DerivAtTest-5 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 0]
+} -result 0.0 -cleanup {
+    unset xloc yloc
+}
+
+test DerivAtTest-6 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 1]
+} -result 1.5 -cleanup {
+    unset xloc yloc
+}
+
+test DerivAtTest-7 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 5]
+} -result 10.0 -cleanup {
+    unset xloc yloc
+}
+
+test DerivAtTest-8 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 4]
+} -result 8.0 -cleanup {
+    unset xloc yloc
+}
+
+### Check handling of wrong switches combinations
+test CheckTest-1 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -at 5} errorStr
+    return $errorStr
+} -result {When -at switch is presented, -find switch or -deriv switch is required} -cleanup {
+    unset errorStr
+}
+
+test CheckTest-2 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find 5} errorStr
+    return $errorStr
+} -result {When -find switch is presented, -when switch or -at switch is required} -cleanup {
+    unset errorStr
+}
+
+test CheckTest-3 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when 5 -at 1} errorStr
+    return $errorStr
+} -result {when doesn't allow at} -cleanup {
+    unset errorStr
+}
+
+test CheckTest-4 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv 5 -find 1} errorStr
+    return $errorStr
+} -result {find doesn't allow deriv} -cleanup {
+    unset errorStr
+}
+
 
 cleanupTests

@@ -277,8 +277,8 @@ proc ::tclmeasure::measure {args} {
             set targData [dget $data $xname]
             set targVal [dget $targArgs at]
         }
-        return [::tclmeasure::TrigTarg [dget $data $xname] $trigData $trigVal $targData $targVal $trigVecCond $trigVecCondCount\
-                        $targVecCond $targVecCondCount [dget $trigArgs delay] [dget $targArgs delay]]
+        return [::tclmeasure::TrigTarg [dget $data $xname] $trigData $trigVal $targData $targVal $trigVecCond\
+                        $trigVecCondCount $targVecCond $targVecCondCount [dget $trigArgs delay] [dget $targArgs delay]]
     } elseif {[info exists find] && [info exists when]} {
         set whenArgs [argparse -inline {
             {-vec= -require val -forbid {vec1 vec2}}
@@ -306,13 +306,13 @@ proc ::tclmeasure::measure {args} {
             if {[dget $whenArgs vec1] eq [dget $whenArgs vec2]} {
                 return -code error "vec1 must be different to vec2"
             }
-            return [::tclmeasure::FindDerivWhen [dget $data $xname] findwheneq [dget $data $find] [dget $data [dget $whenArgs vec1]]\
-                            {} [dget $data [dget $whenArgs vec2]] $whenVecCond [dget $whenArgs $whenVecCond]\
-                            [dget $whenArgs delay] $from $to]
+            return [::tclmeasure::FindDerivWhen [dget $data $xname] findwheneq [dget $data $find]\
+                            [dget $data [dget $whenArgs vec1]] {} [dget $data [dget $whenArgs vec2]] $whenVecCond\
+                            [dget $whenArgs $whenVecCond] [dget $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dget $data $xname] findwhen [dget $data $find] [dget $data [dget $whenArgs vec]]\
-                            [dget $whenArgs val] {} $whenVecCond [dget $whenArgs $whenVecCond] [dget $whenArgs delay]\
-                            $from $to]
+            return [::tclmeasure::FindDerivWhen [dget $data $xname] findwhen [dget $data $find]\
+                            [dget $data [dget $whenArgs vec]] [dget $whenArgs val] {} $whenVecCond\
+                            [dget $whenArgs $whenVecCond] [dget $whenArgs delay] $from $to]
         }
     } elseif {[info exists deriv] && [info exists when]} {
         set whenArgs [argparse -inline {
@@ -341,13 +341,13 @@ proc ::tclmeasure::measure {args} {
             if {[dget $whenArgs vec1] eq [dget $whenArgs vec2]} {
                 return -code error "vec1 must be different to vec2"
             }
-            return [::tclmeasure::FindDerivWhen [dget $data $xname] derivwheneq [dget $data $deriv] [dget $data [dget $whenArgs vec1]]\
-                            {} [dget $data [dget $whenArgs vec2]] $whenVecCond [dget $whenArgs $whenVecCond]\
-                            [dget $whenArgs delay] $from $to]
+            return [::tclmeasure::FindDerivWhen [dget $data $xname] derivwheneq [dget $data $deriv]\
+                            [dget $data [dget $whenArgs vec1]] {} [dget $data [dget $whenArgs vec2]] $whenVecCond\
+                            [dget $whenArgs $whenVecCond] [dget $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dget $data $xname] derivwhen [dget $data $deriv] [dget $data [dget $whenArgs vec]]\
-                            [dget $whenArgs val] {} $whenVecCond [dget $whenArgs $whenVecCond] [dget $whenArgs delay]\
-                            $from $to]
+            return [::tclmeasure::FindDerivWhen [dget $data $xname] derivwhen [dget $data $deriv]\
+                            [dget $data [dget $whenArgs vec]] [dget $whenArgs val] {} $whenVecCond\
+                            [dget $whenArgs $whenVecCond] [dget $whenArgs delay] $from $to]
         }
     } elseif {[info exists when]} {
         set whenArgs [argparse -inline {
@@ -377,8 +377,9 @@ proc ::tclmeasure::measure {args} {
                             [dget $data [dget $whenArgs vec2]] $whenVecCond [dget $whenArgs $whenVecCond]\
                             [dget $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dget $data $xname] when {} [dget $data [dget $whenArgs vec]] [dget $whenArgs val] {}\
-                            $whenVecCond [dget $whenArgs $whenVecCond] [dget $whenArgs delay] $from $to]
+            return [::tclmeasure::FindDerivWhen [dget $data $xname] when {} [dget $data [dget $whenArgs vec]]\
+                            [dget $whenArgs val] {} $whenVecCond [dget $whenArgs $whenVecCond] [dget $whenArgs delay]\
+                            $from $to]
         }
     } elseif {[info exists find] && [info exists at]} {
         return [::tclmeasure::FindAt [dget $data $xname] $at [dget $data $find]]
@@ -392,7 +393,8 @@ proc ::tclmeasure::measure {args} {
             {-cum -boolean}
         } $integ]
         FromTo $integArgs $data $xname
-        return [::tclmeasure::Integ [dget $data $xname] [dget $data [dget $integArgs vec]] $from $to [dget $integArgs cum]]
+        return [::tclmeasure::Integ [dget $data $xname] [dget $data [dget $integArgs vec]] $from $to\
+                        [dget $integArgs cum]]
     } elseif {[info exists avg]} {
         set avgArgs [argparse -inline {
             {-vec= -required}

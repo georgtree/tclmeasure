@@ -25,6 +25,8 @@ static inline double CalcCrossPoint(double x11, double y11, double x21, double y
                                     double y22);
 static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
+static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
+static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
                         Tcl_Obj **x, Tcl_Obj **vec, double ywhen, double *out, int *pos);
 static double Deriv(double xim1, double xi, double xip1, double yim1, double yi, double yip1, int type);

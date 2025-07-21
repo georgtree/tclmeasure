@@ -31,8 +31,8 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     }
     Tcl_CreateObjCommand2(interp, "::tclmeasure::TrigTarg", (Tcl_ObjCmdProc2 *)TrigTargCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindDerivWhen", (Tcl_ObjCmdProc2 *)FindDerivWhenCmdProc2, NULL, NULL);
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::FindAt", (Tcl_ObjCmdProc2 *)FindAtCmdProc2, NULL, NULL); */
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::DerivAt", (Tcl_ObjCmdProc2 *)DerivAtCmdProc2, NULL, NULL); */
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::FindAt", (Tcl_ObjCmdProc2 *)FindAtCmdProc2, NULL, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::DerivAt", (Tcl_ObjCmdProc2 *)DerivAtCmdProc2, NULL, NULL);
     /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Integ", (Tcl_ObjCmdProc2 *)IntegCmdProc2, NULL, NULL); */
     /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Avg", (Tcl_ObjCmdProc2 *)AvgCmdProc2, NULL, NULL); */
     /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Rms", (Tcl_ObjCmdProc2 *)RmsCmdProc2, NULL, NULL); */
@@ -60,8 +60,8 @@ static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwh
             out[1] = xip1;
             Tcl_GetDoubleFromObj(interp, x[i + 2], &out[2]);
             out[3] = ywhen;
-            Tcl_GetDoubleFromObj(interp, x[i + 1], &out[4]);
-            Tcl_GetDoubleFromObj(interp, x[i + 2], &out[5]);
+            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[4]);
+            Tcl_GetDoubleFromObj(interp, vec[i + 2], &out[5]);
             *pos = -1;
         } else if (xip1 == xwhen) {
             out[0] = xi;
@@ -138,7 +138,7 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
     } else if (type == 1) {
         return h2 / (h1 * (h1 + h2)) * yim1 - (h1 + h2) / (h1 * h2) * yi + (h1 + 2 * h2) / (h2 * (h1 + h2)) * yip1;
     }
-    return 0.0;
+    //return 0.0;
 }
 
 static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
@@ -826,4 +826,100 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         return TCL_OK;
     }
     return TCL_ERROR;
+}
+
+static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    if (objc != 4) {
+        Tcl_WrongNumArgs(interp, 3, objv, "x val findVec");
+        return TCL_ERROR;
+    }
+    Tcl_Size xLen, findVecLen;
+    Tcl_Obj **xVecElems, **findVecElems;
+    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    double val;
+    Tcl_GetDoubleFromObj(interp, objv[2], &val);
+    if (Tcl_ListObjGetElements(interp, objv[3], &findVecLen, &findVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    if (xLen != findVecLen) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of findVec '%ld'", xLen, findVecLen);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    }
+    double yFind;
+    int foundFlag = 0;
+    for (Tcl_Size i = 0; i < xLen - 1; ++i) {
+        double xi, xip1, findVecI, findVecIp1;
+        Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
+        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
+        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecI);
+        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecIp1);
+        if ((xi <= val) && (xip1 >= val)) {
+            yFind = CalcYBetween(xi, findVecI, xip1, findVecIp1, val);
+            foundFlag = 1;
+            break;
+        } 
+    }
+    if (!foundFlag) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Value of the vector at '%f' was not found", val);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else {
+        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(yFind));
+        return TCL_OK;
+    }
+}
+
+static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    if (objc != 4) {
+        Tcl_WrongNumArgs(interp, 3, objv, "x val derivVec");
+        return TCL_ERROR;
+    }
+    Tcl_Size xLen, derivVecLen;
+    Tcl_Obj **xVecElems, **derivVecElems;
+    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    double val;
+    Tcl_GetDoubleFromObj(interp, objv[2], &val);
+    if (Tcl_ListObjGetElements(interp, objv[3], &derivVecLen, &derivVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    if (xLen != derivVecLen) {
+        Tcl_Obj *errorMsg =
+            Tcl_ObjPrintf("Length of x '%ld' is not equal to length of derivVec '%ld'", xLen, derivVecLen);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    }
+    double yDeriv, derY;
+    int foundFlag = 0;
+    for (Tcl_Size i = 0; i < xLen - 1; ++i) {
+        double xi, xip1, derivVecI, derivVecIp1;
+        Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
+        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
+        Tcl_GetDoubleFromObj(interp, derivVecElems[i], &derivVecI);
+        Tcl_GetDoubleFromObj(interp, derivVecElems[i + 1], &derivVecIp1);
+        if ((xi <= val) && (xip1 >= val)) {
+            double derivDataTemp[6];
+            int derivPosTemp;
+            yDeriv = CalcYBetween(xi, derivVecI, xip1, derivVecIp1, val);
+            DerivSelect(interp, i, xi, val, xip1, xLen, xVecElems, derivVecElems, yDeriv, derivDataTemp,
+                        &derivPosTemp);
+            derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3], derivDataTemp[4],
+                         derivDataTemp[5], derivPosTemp);
+            foundFlag = 1;
+            break;
+        } 
+    }
+    if (!foundFlag) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Derivative of the vector at '%f' was not found", val);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else {
+        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(derY));
+        return TCL_OK;
+    }
+
 }
