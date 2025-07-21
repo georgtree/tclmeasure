@@ -59,4 +59,116 @@ test TrigTargTest-7 {} -body {
     return $errorStr
 } -result {Targ value '-0.100000' with conditions 'fall 20 delay=0.000000' was not found}
 
+### FindWhen tests
+test FindWhenTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0.5 -fall 5}]
+} -result 0.8656776653169641
+
+test FindWhenTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
+                    -when {-vec y2 -val 0.5 -fall all}]
+} -result {0.8659480349968515 0.865680229712564 0.8657418826412921 0.8659366421684264 0.8656776653169641\
+                   0.8657478888140752 0.8659254860082891 0.8656753304879521}
+
+test FindWhenTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec y2 -val 0.5 -fall 5}]
+} -result 26.17976390163929
+
+test FindWhenTest-4 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec y2 -val 0.5 -fall all}]
+} -result {1.0471578743251442 7.330209181364409 13.613428264764178 19.896707975918524 26.17976390163929\
+                   32.46298722138866 38.74625820457005 45.029318738629485}
+
+test FindWhenTest-5 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}]
+} -result -0.706968221057803
+
+test FindWhenTest-6 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
+                    -when {-vec1 y1 -vec2 y2 -fall all}]
+} -result {-0.7068872226471654 -0.7069634970616326 -0.7070049990743651 -0.7068866674037738 -0.706968221057803\
+                   -0.7069993033256949 -0.7068862515631232 -0.7069730845371476}
+
+test FindWhenTest-7 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 5}]
+} -result 29.059734040425376
+
+test FindWhenTest-8 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall all}]
+} -result {3.9269904048459794 10.210178126898237 16.493359669208044 22.776546417508598 29.059734040425376\
+                   35.3429155371396 41.62610243078114 47.90928994793005}
+
+test FindWhenTest-9 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -cross all}]
+} -result {0.7853963717173225 3.9269904048459794 7.06858471936647 10.210178126898237 13.351769438547745\
+                   16.493359669208044 19.634952339789507 22.776546417508598 25.91814071385083 29.059734040425376\
+                   32.201325208292914 35.3429155371396 38.4845083117874 41.62610243078114 44.76769670562969\
+                   47.90928994793005}
+
+test FindWhenTest-10 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 5 -from 1\
+                                                                                          -to 30}]
+} -result 29.059734040425376
+
+test FindWhenTest-11 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 5 -from 10\
+                                                                                         -to 20}} errorStr
+    return $errorStr
+} -result {Cross between vectors with conditions 'fall 5 delay=0.000000 from=10.000000 to=20.000000' was not found}
+
+test FindWhenTest-12 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2]\
+            -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}]
+} -result 29.059734040425376
+
+test FindWhenTest-13 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
+                    -when {-vec y2 -val 0.5 -fall last}]
+} -result 0.8656753304879521
+
+test FindWhenTest-14 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last}]
+} -result 47.90928994793005
+
+test FindWhenTest-15 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 2 -from 10\
+                                                                                          -to 20}]
+} -result 16.493359669208044
+
+test FindWhenTest-16 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 1 -fall 1}]
+} -result 0.0
+
+test FindWhenTest-17 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -when {-vec1 y1 -vec2 y2 -fall 1\
+                                                                                                   -from -5 -to 30}]
+} -result -2.356196191479806
+
+test FindWhenTest-18 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym]\
+                    -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
+} -result -18.059860150158045
+
+test FindWhenTest-19 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y2\
+                    -when {-vec1 y1 -vec2 y2 -fall 1 -from -5 -to 30}]
+} -result -0.7070108343424859
+
+test FindWhenTest-20 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y2\
+                    -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
+} -result 0.7039206613685683
+
+test FindWhenTest-21 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y1\
+                    -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
+} -result 0.7100000000000005
+
+test FindWhenTest-22 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y2\
+                   -when {-vec1 y1 -vec2 y2 -fall 20 -from -5 -to 30}} errorStr
+    return $errorStr
+} -result {Cross between vectors with conditions 'fall 20 delay=0.000000 from=-5.000000 to=30.000000' was not found}
+
+
 cleanupTests
