@@ -10,7 +10,7 @@ For building you need:
 - [make tool](https://www.gnu.org/software/make/)
 
 For run you also need:
-- [argparse](https://wiki.tcl-lang.org/page/argparse)
+- [argparse](https://github.com/georgtree/argparse)
 - [Tcllib](https://www.tcl.tk/software/tcllib/)
 
 To build run 
