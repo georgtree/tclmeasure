@@ -1,31 +1,18 @@
 #include <tcl.h>
 
-enum Conditions {
-    COND_RISE = 0,
-    COND_FALL,
-    COND_CROSS
-};
+enum Conditions { COND_RISE = 0, COND_FALL, COND_CROSS };
 enum FindDerivWhenSwitchId {
     FDW_SWITCH_WHEN = 0,
     FDW_SWITCH_WHENEQ,
     FDW_SWITCH_FINDWHEN,
     FDW_SWITCH_DERIVWHEN,
     FDW_SWITCH_FINDWHENEQ,
-    FDW_SWITCH_DERIVWHENEQ,
-    FDW_SWITCH_COUNT // total number of global switches
+    FDW_SWITCH_DERIVWHENEQ
 };
 
-enum Types {
-    TYPE_MIN = 0,
-    TYPE_MAX,
-    TYPE_PP,
-    TYPE_MINAT,
-    TYPE_MAXAT,
-    TYPE_BETWEEN
-};
+enum Types { TYPE_MIN = 0, TYPE_MAX, TYPE_PP, TYPE_MINAT, TYPE_MAXAT, TYPE_BETWEEN };
 static const char *FindDerivWhenSwitches[] = {"when",       "wheneq",      "findwhen", "derivwhen",
                                               "findwheneq", "derivwheneq", NULL};
-
 const char *TclGetUnqualifiedName(const char *qualifiedName);
 extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp);
 static inline double CalcXBetween(double x1, double y1, double x2, double y2, double yBetween);
@@ -41,7 +28,8 @@ static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwh
 static double Deriv(double xim1, double xi, double xip1, double yim1, double yi, double yip1, int type);
 static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
-double* sliceWithAddEnds(const double* arr, Tcl_Size start, Tcl_Size end, double addStart, double addEnd, Tcl_Size* outLen);
+double *sliceWithAddEnds(const double *arr, Tcl_Size start, Tcl_Size end, double addStart, double addEnd,
+                         Tcl_Size *outLen);
 Tcl_Size findMaxIndex(double arr[], Tcl_Size len);
 double findMax(double arr[], Tcl_Size len);
 Tcl_Size findMinIndex(double arr[], Tcl_Size len);
