@@ -6,6 +6,41 @@
 #include <string.h>
 #include <tcl.h>
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * Tclmeasure_Init --
+ *
+ *      Entry point for the `tclmeasure` Tcl extension. This function initializes the package, ensures that
+ *      the target namespace exists, provides the package to the Tcl interpreter, and registers all associated
+ *      commands implemented in C.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: Tcl interpreter where the extension is being loaded
+ *
+ * Results:
+ *      TCL_OK on success; TCL_ERROR if:
+ *          - Tcl stubs initialization fails
+ *          - Namespace creation fails
+ *          - Tcl_PkgProvideEx fails
+ *
+ * Side Effects:
+ *      - Ensures the namespace `::tclmeasure` exists
+ *      - Registers the following object-based commands:
+ *          ::tclmeasure::TrigTarg
+ *          ::tclmeasure::FindDerivWhen
+ *          ::tclmeasure::FindAt
+ *          ::tclmeasure::DerivAt
+ *          ::tclmeasure::Integ
+ *          ::tclmeasure::MinMaxPPMinAtMaxAt
+ *      - Marks the extension as available via `package require tclmeasure`
+ *
+ * Notes:
+ *      - Requires Tcl version 8.6 through 10.0 (inclusive), verified via `Tcl_InitStubs()`
+ *      - Relies on `Tcl_CreateObjCommand2`, which requires Tcl 8.6+
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     if (Tcl_InitStubs(interp, "8.6-10.0", 0) == NULL) {
         return TCL_ERROR;
@@ -28,18 +63,131 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * CalcXBetween --
+ *
+ *      Compute the X-coordinate of a point lying on the line segment between (x1, y1) and (x2, y2),
+ *      given a specific Y-coordinate (yBetween). This is a linear interpolation along the line.
+ *
+ * Parameters:
+ *      double x1         - input: X-coordinate of the first point
+ *      double y1         - input: Y-coordinate of the first point
+ *      double x2         - input: X-coordinate of the second point
+ *      double y2         - input: Y-coordinate of the second point
+ *      double yBetween   - input: Y value for which to compute the corresponding X on the line
+ *
+ * Results:
+ *      Returns the interpolated X-coordinate such that (x, yBetween) lies on the line from (x1, y1) to (x2, y2)
+ *
+ * Side Effects:
+ *      None
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static inline double CalcXBetween(double x1, double y1, double x2, double y2, double yBetween) {
     return (yBetween - y1) * (x2 - x1) / (y2 - y1) + x1;
 }
+
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * CalcYBetween --
+ *
+ *      Compute the Y-coordinate of a point lying on the line segment between (x1, y1) and (x2, y2),
+ *      given a specific X-coordinate (xBetween). This is a linear interpolation along the line.
+ *
+ * Parameters:
+ *      double x1         - input: X-coordinate of the first point
+ *      double y1         - input: Y-coordinate of the first point
+ *      double x2         - input: X-coordinate of the second point
+ *      double y2         - input: Y-coordinate of the second point
+ *      double xBetween   - input: X value for which to compute the corresponding Y on the line
+ *
+ * Results:
+ *      Returns the interpolated Y-coordinate such that (xBetween, y) lies on the line from (x1, y1) to (x2, y2)
+ *
+ * Side Effects:
+ *      None
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static inline double CalcYBetween(double x1, double y1, double x2, double y2, double xBetween) {
     return (y2 - y1) / (x2 - x1) * (xBetween - x1) + y1;
 }
+
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * CalcCrossPoint --
+ *
+ *      Compute the X-coordinate of the intersection point of two lines. Each line is defined by a pair of points:
+ *      (x11, y11)-(x21, y21) for the first line, and (x12, y12)-(x22, y22) for the second line. The function assumes
+ *      the lines are not parallel and that the denominators are non-zero.
+ *
+ * Parameters:
+ *      double x11, y11   - input: coordinates of the first point on the first line
+ *      double x21, y21   - input: coordinates of the second point on the first line
+ *      double x12, y12   - input: coordinates of the first point on the second line
+ *      double x22, y22   - input: coordinates of the second point on the second line
+ *
+ * Results:
+ *      Returns the X-coordinate of the intersection point of the two lines.
+ *
+ * Side Effects:
+ *      None
+ *
+ * Notes:
+ *      The function does not perform error checking for division by zero. It is the caller's responsibility to ensure
+ *      the lines are not parallel (i.e., they have different slopes).
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static inline double CalcCrossPoint(double x11, double y11, double x21, double y21, double x12, double y12, double x22,
                                     double y22) {
     return (y12 - (y22 - y12) / (x22 - x12) * x12 - (y11 - (y21 - y11) / (x21 - x11) * x11)) /
            ((y21 - y11) / (x21 - x11) - (y22 - y12) / (x22 - x12));
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * DerivSelect --
+ *
+ *      Prepare a 3-point stencil for derivative or interpolation calculations based on a specified X-coordinate
+ *      (`xwhen`) that lies between two adjacent sample points (xi and xip1). Depending on the location of `xwhen`
+ *      relative to the segment and its position in the array, the function selects appropriate X and Y values from
+ *      the input arrays `x` and `vec`, converts them to doubles, and writes them into the `out` buffer.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp   - input: target interpreter used for Tcl_GetDoubleFromObj conversions
+ *      Tcl_WideInt i        - input: current segment index (base point index in x/vec arrays)
+ *      double xi            - input: X value at index `i`
+ *      double xwhen         - input: target X value (interpolation/evaluation point)
+ *      double xip1          - input: X value at index `i + 1`
+ *      Tcl_WideInt xlen     - input: total number of elements in the `x` array
+ *      Tcl_Obj **x          - input: array of Tcl_Obj pointers holding X values (at least x[i-1] to x[i+2])
+ *      Tcl_Obj **vec        - input: array of Tcl_Obj pointers holding corresponding Y values
+ *      double ywhen         - input: Y value at the point `xwhen` (for use in interpolation output)
+ *      double *out          - output: pointer to a 6-element array to store the selected X and Y values
+ *                                out[0..2] = selected X values (or interpolated positions)
+ *                                out[3..5] = selected Y values (with ywhen at the center)
+ *      int *pos             - output: index of the middle point in `out`, used to identify where `xwhen` fits:
+ *                                -1 = unknown/middle is ywhen (e.g. edge case),
+ *                                 0 = ywhen is second point in sequence (common case),
+ *                                 1 = ywhen is last (used for final segment)
+ *
+ * Results:
+ *      Populates the `out` buffer with 3 X values and 3 corresponding Y values to form a stencil around `xwhen`.
+ *      Uses Tcl_GetDoubleFromObj to safely convert the values. The result is intended for slope or interpolation use.
+ *
+ * Side Effects:
+ *      May set error messages in the interpreter if Tcl_GetDoubleFromObj fails (typically not expected if inputs
+ *      are known to be numeric).
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
                         Tcl_Obj **x, Tcl_Obj **vec, double ywhen, double *out, int *pos) {
     if (i == 0) {
@@ -116,6 +264,39 @@ static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwh
     return;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * Deriv --
+ *
+ *      Compute the numerical derivative at a point using a three-point stencil. The function supports three types of
+ *      finite-difference approximations (centered, backward, and forward) depending on the `type` parameter.
+ *      The input values represent three adjacent (x, y) points: (xim1, yim1), (xi, yi), and (xip1, yip1).
+ *
+ * Parameters:
+ *      double xim1     - input: X value at i-1 (previous point)
+ *      double xi       - input: X value at i (current point)
+ *      double xip1     - input: X value at i+1 (next point)
+ *      double yim1     - input: Y value at i-1
+ *      double yi       - input: Y value at i
+ *      double yip1     - input: Y value at i+1
+ *      int type        - input: derivative type selector:
+ *                           0  = centered difference (at xi)
+ *                          -1  = backward-biased (at xi)
+ *                           1  = forward-biased (at xi)
+ *
+ * Results:
+ *      Returns the estimated derivative at xi using the appropriate finite-difference formula based on `type`.
+ *
+ * Side Effects:
+ *      None
+ *
+ * Notes:
+ *      This method handles non-uniform spacing between X values. It assumes that h1 = xi - xim1 and h2 = xip1 - xi
+ *      are both non-zero. If `type` is not -1, 0, or 1, the function returns 0.0 by default.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static double Deriv(double xim1, double xi, double xip1, double yim1, double yi, double yip1, int type) {
     double h1 = xi - xim1;
     double h2 = xip1 - xi;
@@ -129,6 +310,56 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
     return 0.0;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * TrigTargCmdProc2 --
+ *
+ *      Tcl command implementation that analyzes two vector signals (trigVec and targVec) over a shared time base (x),
+ *      detects specified edge transitions (rise, fall, or crossing) for each vector, and returns the time difference
+ *      between the trigger and target events. The function supports both fixed occurrence counts and "last" mode to
+ *      capture the final matching transition.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional client data (unused)
+ *      Tcl_Interp *interp            - input/output: interpreter used for argument parsing and result/error reporting
+ *      Tcl_Size objc                 - input: number of arguments passed to the command
+ *      Tcl_Obj *const objv[]         - input: argument vector; expected format:
+ *
+ *              objv[1]  = x           - Tcl list of numeric X values (time base)
+ *              objv[2]  = trigVec     - Tcl list of Y values for the trigger signal
+ *              objv[3]  = val1        - trigger threshold value
+ *              objv[4]  = targVec     - Tcl list of Y values for the target signal
+ *              objv[5]  = val2        - target threshold value
+ *              objv[6]  = trigCond    - trigger condition: "rise", "fall", or "cross"
+ *              objv[7]  = trigCount   - trigger hit index to use (or "last")
+ *              objv[8]  = targCond    - target condition: "rise", "fall", or "cross"
+ *              objv[9]  = targCount   - target hit index to use (or "last")
+ *              objv[10] = trigDelay   - minimum X value before trigger events are considered
+ *              objv[11] = targDelay   - minimum X value before target events are considered
+ *
+ * Results:
+ *      On success, returns a dictionary with the following keys:
+ *          "xtrig"   => interpolated X value at which trigger condition was met
+ *          "xtarg"   => interpolated X value at which target condition was met
+ *          "xdelta"  => difference (xtarg - xtrig)
+ *
+ *      On failure, returns TCL_ERROR and sets an error message in the interpreter.
+ *
+ * Side Effects:
+ *      Parses and converts lists to arrays, and individual values to doubles and integers.
+ *      May allocate intermediate Tcl_Obj structures.
+ *      Sets the interpreter result to either an error message or result dictionary.
+ *
+ * Notes:
+ *      - Lists must be of equal length.
+ *      - Events are detected using a two-point scan for each segment: (xi, xi+1), (vec[i], vec[i+1]).
+ *      - Linear interpolation is used to estimate the exact X value where val1/val2 thresholds are crossed.
+ *      - Condition counts are 1-based; use "last" to return the final matching transition.
+ *      - If the requested condition is not found, a descriptive error is returned.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     int trigVecCount = 0;
     int targVecCount = 0;
@@ -370,6 +601,56 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * FindDerivWhenCmdProc2 --
+ *
+ *      Implements a Tcl command to evaluate time-domain vector conditions (rise/fall/crossing) over one or more
+ *      time-aligned signals. Depending on the selected mode, it returns either the time (`xWhen`) of a matching
+ *      condition, the corresponding value from a secondary signal (`yFind`), or the derivative at the matched time.
+ *      The function supports flexible condition targeting via explicit index, "last", or "all" modes.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional user data (unused)
+ *      Tcl_Interp *interp            - input/output: interpreter for result and error reporting
+ *      Tcl_Size objc                 - input: number of command arguments
+ *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
+ *
+ *          objv[1]  = x              - list of X (time) values
+ *          objv[2]  = mode           - one of: when, wheneq, findwhen, findwheneq, derivwhen, derivwheneq
+ *          objv[3]  = findVec        - list of values used for yFind or derivative computations
+ *          objv[4]  = whenVecLS      - left-side comparison signal for condition detection
+ *          objv[5]  = val            - scalar threshold for single-vector comparisons
+ *          objv[6]  = whenVecRS      - right-side signal (used for equality/cross-vector mode)
+ *          objv[7]  = whenVecCond    - condition: "rise", "fall", or "cross"
+ *          objv[8]  = whenVecCondCount - index (1-based), "last", or "all" occurrence of condition to use
+ *          objv[9]  = delay          - minimum X before any condition is considered
+ *          objv[10] = from           - inclusive range start for evaluation
+ *          objv[11] = to             - inclusive range end for evaluation
+ *
+ * Results:
+ *      TCL_OK on success, with interpreter result set to:
+ *        - list of xWhen values       (mode: "when", "wheneq")
+ *        - list of interpolated yFind (mode: "findwhen", "findwheneq")
+ *        - list of derivatives        (mode: "derivwhen", "derivwheneq")
+ *
+ *      TCL_ERROR on failure (e.g. invalid arguments, mismatched vector lengths, no match found).
+ *
+ * Side Effects:
+ *      May allocate and populate Tcl lists (`xWhenObj`, `yFindObj`, `derYObj`) as return values.
+ *      Sets interpreter result to descriptive error messages if validation or detection fails.
+ *
+ * Notes:
+ *      - Matching is performed on (x, value) pairs from `whenVecLS` and optionally `whenVecRS`.
+ *      - Linear interpolation is used to find exact crossing points (`CalcXBetween`, `CalcCrossPoint`).
+ *      - Derivative estimation uses 3-point stencil via `DerivSelect()` and `Deriv()` with positional logic.
+ *      - "last" uses the most recent matching event, "all" accumulates all matching times and values.
+ *      - For `wheneq`, a cross-condition between `whenVecLS` and `whenVecRS` is evaluated.
+ *      - Derivative results are aligned with crossing points and interpolated values.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     double lastWhenHit[4] = {0.0, 0.0, 0.0, 0.0};
     int lastWhenHitSet = 0;
@@ -812,6 +1093,43 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     return TCL_ERROR;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * FindAtCmdProc2 --
+ *
+ *      Implements a Tcl command that performs linear interpolation on a time-aligned signal. Given a scalar X value,
+ *      this command scans a sequence of (x, y) points and returns the interpolated Y value at the specified X.
+ *      The interpolation uses the segment between two bounding X values that bracket the input X.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional user data (unused)
+ *      Tcl_Interp *interp            - input/output: interpreter used for result and error reporting
+ *      Tcl_Size objc                 - input: number of command arguments
+ *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
+ *
+ *          objv[1] = x        - list of X (time) values
+ *          objv[2] = val      - scalar X value to look up
+ *          objv[3] = findVec  - list of Y values aligned with `x`
+ *
+ * Results:
+ *      TCL_OK if `val` is within a segment in `x`; the corresponding interpolated Y value is returned via interpreter.
+ *      TCL_ERROR if:
+ *          - the number of arguments is invalid,
+ *          - any list parsing fails,
+ *          - list lengths mismatch,
+ *          - `val` lies outside all segment ranges in `x`
+ *
+ * Side Effects:
+ *      Sets interpreter result to the computed Y value or an error message on failure.
+ *
+ * Notes:
+ *      - The function assumes `x` is sorted in ascending order.
+ *      - Only the first matching segment where `xi <= val <= xi+1` is used.
+ *      - Uses `CalcYBetween` to interpolate linearly between two Y values.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     if (objc != 4) {
         Tcl_WrongNumArgs(interp, 3, objv, "x val findVec");
@@ -857,6 +1175,44 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
     }
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * DerivAtCmdProc2 --
+ *
+ *      Implements a Tcl command that computes the numerical derivative of a signal vector at a specified X position.
+ *      The derivative is estimated using a 3-point stencil around the interpolation point. The function searches for
+ *      a segment [xi, xi+1] that brackets the given value and uses neighboring data (when available) for accuracy.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional user data (unused)
+ *      Tcl_Interp *interp            - input/output: interpreter for result or error message
+ *      Tcl_Size objc                 - input: number of command arguments
+ *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
+ *
+ *          objv[1] = x           - list of X (independent) values
+ *          objv[2] = val         - scalar X value where derivative should be evaluated
+ *          objv[3] = derivVec    - list of Y (dependent) values aligned with `x`
+ *
+ * Results:
+ *      TCL_OK on success, with interpreter result set to a double representing the estimated derivative.
+ *      TCL_ERROR on:
+ *          - wrong number of arguments,
+ *          - list extraction failure,
+ *          - mismatched vector lengths,
+ *          - val lying outside the data range
+ *
+ * Side Effects:
+ *      Uses `DerivSelect()` to extract the proper 3-point stencil and compute the interpolated derivative using `Deriv()`.
+ *      Sets the interpreter result to either a floating-point derivative or a descriptive error message.
+ *
+ * Notes:
+ *      - Linear interpolation is used to estimate the Y value at `val`, then finite-difference is applied.
+ *      - The method adapts to edges (beginning or end of the dataset) using forward/backward biased stencils.
+ *      - Requires at least 3 points in `x` and `derivVec` to compute valid derivatives.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     if (objc != 4) {
         Tcl_WrongNumArgs(interp, 3, objv, "x val derivVec");
@@ -907,6 +1263,53 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
     }
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * IntegCmdProc2 --
+ *
+ *      Implements a Tcl command that numerically integrates a Y vector over a given interval in X using the trapezoidal
+ *      rule. Supports optional output of cumulative integral values over the integration domain.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional user data (unused)
+ *      Tcl_Interp *interp            - input/output: Tcl interpreter for error and result handling
+ *      Tcl_Size objc                 - input: number of command arguments
+ *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
+ *
+ *          objv[1] = x        - list of X values (time domain)
+ *          objv[2] = y        - list of Y values (to integrate over X)
+ *          objv[3] = xstart   - start of the integration interval (must lie within `x`)
+ *          objv[4] = xend     - end of the integration interval (must lie within `x`)
+ *          objv[5] = cum      - boolean flag; if true, return cumulative integral series as dict with "x" and "y" keys
+ *
+ * Results:
+ *      TCL_OK on success:
+ *          - If `cum` is false: interpreter result is the total integral (double)
+ *          - If `cum` is true: result is a dict with keys:
+ *              "x" => list of X values from the integration path
+ *              "y" => list of cumulative integral values
+ *
+ *      TCL_ERROR on:
+ *          - invalid argument count
+ *          - non-numeric or non-list inputs
+ *          - mismatched lengths between `x` and `y`
+ *          - `xstart`/`xend` outside the `x` domain
+ *          - `xstart >= xend`
+ *
+ * Side Effects:
+ *      Uses `CalcYBetween()` to interpolate values at exact `xstart` and `xend` positions for accurate integration.
+ *      Accumulates the integral using trapezoidal rule:
+ *          ∫(a to b) y dx ≈ Σ [(yi + yi+1)/2] * (xi+1 - xi)
+ *      When `cum` is enabled, builds Tcl lists for cumulative output.
+ *
+ * Notes:
+ *      - Assumes `x` is monotonically increasing.
+ *      - All interpolation and accumulation is performed in double precision.
+ *      - Caller is responsible for ensuring signal alignment and sampling accuracy.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     if (objc != 6) {
         Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend cum");
@@ -1015,6 +1418,35 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
     }
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * findMinObj --
+ *
+ *      Find the minimum value among a list of Tcl_Obj pointers, each representing a numeric value. The function parses
+ *      all elements as doubles and returns the smallest one.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: interpreter for error reporting if conversion fails
+ *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (assumed to be numeric values)
+ *      Tcl_Size len              - input: number of elements in the `objv` array
+ *      double *result            - output: pointer to store the minimum value found
+ *
+ * Results:
+ *      TCL_OK on success, and *result is set to the minimum double value from the array
+ *      TCL_ERROR if:
+ *          - len is zero or negative
+ *          - any element in `objv` fails conversion to double (error message set in interpreter)
+ *
+ * Side Effects:
+ *      On failure, sets an error message in the interpreter result
+ *
+ * Notes:
+ *      - Uses `fmin()` to preserve IEEE behavior with NaNs if present.
+ *      - All numeric values are interpreted as double precision.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
     if (len <= 0)
         return TCL_ERROR;
@@ -1031,6 +1463,35 @@ int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * findMaxObj --
+ *
+ *      Find the maximum value among a list of Tcl_Obj pointers, each representing a numeric value. The function parses
+ *      all elements as doubles and returns the largest one.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: interpreter for error reporting if conversion fails
+ *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to hold numeric values)
+ *      Tcl_Size len              - input: number of elements in the `objv` array
+ *      double *result            - output: pointer to store the maximum value found
+ *
+ * Results:
+ *      TCL_OK on success, and *result is set to the maximum double value from the array
+ *      TCL_ERROR if:
+ *          - len is zero or negative
+ *          - any element in `objv` cannot be converted to a double (error set in interpreter)
+ *
+ * Side Effects:
+ *      On failure, sets an error message in the interpreter result
+ *
+ * Notes:
+ *      - Uses `fmax()` to ensure IEEE compliance (e.g., handling NaNs).
+ *      - All values are treated as double-precision floating point.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
     if (len <= 0)
         return TCL_ERROR;
@@ -1047,6 +1508,35 @@ int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * findMinIndexObj --
+ *
+ *      Find the index of the minimum value in an array of Tcl_Obj pointers. Each element is expected to be a numeric
+ *      Tcl object. The function scans the list, converts values to doubles, and returns the index of the smallest one.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: interpreter used for error reporting on conversion failure
+ *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to contain numeric values)
+ *      Tcl_Size len              - input: number of elements in the array
+ *      Tcl_Size *index           - output: pointer to store the index of the minimum value found
+ *
+ * Results:
+ *      TCL_OK on success, with *index set to the position of the minimum value
+ *      TCL_ERROR if:
+ *          - len is zero or negative
+ *          - any element cannot be converted to a double
+ *
+ * Side Effects:
+ *      On error, sets a message in the interpreter result
+ *
+ * Notes:
+ *      - Uses strict `<` comparison; if multiple equal minimum values exist, the first is returned.
+ *      - All values are interpreted as doubles during comparison.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
     if (len <= 0)
         return TCL_ERROR;
@@ -1067,6 +1557,35 @@ int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * findMaxIndexObj --
+ *
+ *      Find the index of the maximum value in an array of Tcl_Obj pointers. Each element is expected to represent
+ *      a numeric value. The function converts each element to a double and returns the index of the largest one.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: interpreter used for error reporting if conversion fails
+ *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (assumed to hold numeric values)
+ *      Tcl_Size len              - input: number of elements in the array
+ *      Tcl_Size *index           - output: pointer to store the index of the maximum value
+ *
+ * Results:
+ *      TCL_OK on success, with *index set to the position of the maximum value
+ *      TCL_ERROR if:
+ *          - len is zero or negative
+ *          - any element fails to convert to a double
+ *
+ * Side Effects:
+ *      On failure, sets an error message in the interpreter
+ *
+ * Notes:
+ *      - Uses strict `>` comparison; if multiple equal maximum values exist, the first is returned.
+ *      - Comparison and value extraction are performed using double-precision floating point.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
     if (len <= 0)
         return TCL_ERROR;
@@ -1087,6 +1606,35 @@ int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * findPPObj --
+ *
+ *      Compute the peak-to-peak (PP) range of a list of Tcl_Obj values by summing the absolute values of the minimum
+ *      and maximum elements. Each value is parsed as a double.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input/output: interpreter used for error reporting if conversion fails
+ *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to contain numeric values)
+ *      Tcl_Size len              - input: number of elements in the array
+ *      double *result            - output: pointer to store the computed peak-to-peak range
+ *
+ * Results:
+ *      TCL_OK on success, with *result set to fabs(min) + fabs(max)
+ *      TCL_ERROR if:
+ *          - `findMinObj` or `findMaxObj` fails (due to invalid input or empty list)
+ *
+ * Side Effects:
+ *      May set an error message in the interpreter if conversion fails
+ *
+ * Notes:
+ *      - Unlike traditional peak-to-peak (max - min), this function returns `fabs(min) + fabs(max)`
+ *        which is useful for symmetric or absolute range calculations.
+ *      - All values are interpreted as double-precision numbers.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
     double min, max;
     if (findMinObj(interp, objv, len, &min) != TCL_OK)
@@ -1097,6 +1645,39 @@ int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *r
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * ListRange --
+ *
+ *      Create a new Tcl list consisting of a prefix element (`firstObj`), a subrange of elements from `listObj`,
+ *      and a suffix element (`lastObj`). The subrange is defined by the `start` and `end` indices (inclusive).
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input: interpreter used for memory management (and list manipulation)
+ *      Tcl_Obj *listObj          - input: Tcl list object from which to extract a subrange
+ *      Tcl_Size start            - input: starting index of the subrange (inclusive)
+ *      Tcl_Size end              - input: ending index of the subrange (inclusive)
+ *      Tcl_Obj *firstObj         - input: object to prepend to the result list
+ *      Tcl_Obj *lastObj          - input: object to append to the result list
+ *
+ * Results:
+ *      Returns a newly created Tcl list with the structure:
+ *          [firstObj elem(start) ... elem(end) lastObj]
+ *
+ *      If the start/end indices are out of range or empty, the result will contain only:
+ *          [firstObj lastObj]
+ *
+ * Side Effects:
+ *      None (allocates a new list Tcl_Obj and returns it)
+ *
+ * Notes:
+ *      - If `start >= listLen`, an empty subrange is used.
+ *      - If `end >= listLen`, it is clamped to `listLen - 1`.
+ *      - If `start > end` or the list is too short, no subrange is included between `firstObj` and `lastObj`.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
                    Tcl_Obj *lastObj) {
     Tcl_Obj **elemPtrs;
@@ -1119,6 +1700,60 @@ Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Siz
     return resultList;
 }
 
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * MinMaxPPMinAtMaxAtCmdProc2 --
+ *
+ *      Implements a Tcl command that analyzes a segment of a (x, y) signal and computes a statistical result over
+ *      that interval. Supported result types include min/max values, peak-to-peak range, and the x-location of
+ *      the min/max value. The interval is defined by `xstart` and `xend`, and the command supports optional
+ *      extraction of the segment as a dictionary.
+ *
+ * Parameters:
+ *      void *clientData              - input: optional user data (unused)
+ *      Tcl_Interp *interp            - input/output: interpreter for result and error reporting
+ *      Tcl_Size objc                 - input: number of command arguments
+ *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
+ *
+ *          objv[1] = x        - list of X values (monotonically increasing)
+ *          objv[2] = y        - list of Y values (aligned with X)
+ *          objv[3] = xstart   - start of the range (inclusive)
+ *          objv[4] = xend     - end of the range (inclusive)
+ *          objv[5] = type     - operation to perform:
+ *                                  "min"     => minimum value of y in range
+ *                                  "max"     => maximum value of y in range
+ *                                  "pp"      => peak-to-peak (fabs(min) + fabs(max))
+ *                                  "minat"   => x value at which min(y) occurs
+ *                                  "maxat"   => x value at which max(y) occurs
+ *                                  "between" => dict with "x" and "y" lists between xstart and xend
+ *
+ * Results:
+ *      TCL_OK with one of the following:
+ *          - A double value (min, max, pp)
+ *          - A scalar X value where the min or max occurs
+ *          - A dictionary {x -> list, y -> list} of the subrange
+ *
+ *      TCL_ERROR on:
+ *          - incorrect argument count
+ *          - failure to parse X or Y lists
+ *          - mismatched X/Y lengths
+ *          - xstart/xend outside of X range or invalid interval
+ *          - unrecognized type keyword
+ *
+ * Side Effects:
+ *      - Performs interpolation at the edges of the integration interval using `CalcYBetween`
+ *      - Creates temporary lists to isolate subranges of x and y for processing
+ *      - Allocates and returns result as either a scalar, list, or dictionary
+ *
+ * Notes:
+ *      - The range [xstart, xend] must lie entirely within the input X domain
+ *      - Subrange data includes interpolated boundary points at xstart and xend
+ *      - Uses helper functions: `findMinObj`, `findMaxObj`, `findPPObj`, `findMinIndexObj`, `findMaxIndexObj`
+ *      - Requires at least 2 X/Y samples in the interval to function correctly
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
 static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
     if (objc != 6) {
         Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend type");
