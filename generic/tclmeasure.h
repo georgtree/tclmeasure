@@ -28,10 +28,10 @@ static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwh
 static double Deriv(double xim1, double xi, double xip1, double yim1, double yi, double yip1, int type);
 static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
-double *sliceWithAddEnds(const double *arr, Tcl_Size start, Tcl_Size end, double addStart, double addEnd,
-                         Tcl_Size *outLen);
-Tcl_Size findMaxIndex(double arr[], Tcl_Size len);
-double findMax(double arr[], Tcl_Size len);
-Tcl_Size findMinIndex(double arr[], Tcl_Size len);
-double findMin(double arr[], Tcl_Size len);
-double findPP(double arr[], Tcl_Size len);
+Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
+                   Tcl_Obj *lastObj);
+int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);
+int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);
+int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index);
+int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index);
+int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);
