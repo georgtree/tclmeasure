@@ -1,7 +1,5 @@
 package require tcltest
 namespace import ::tcltest::*
-package require gnuplotutil
-namespace import ::gnuplotutil::*
 package require tclmeasure
 namespace import ::tclmeasure::*
 package require math::constants
@@ -20,7 +18,6 @@ for {set i -500} {$i<=500} {incr i} {
     lappend y1sym [= {sin($xi)}]
     lappend y2sym [= {cos($xi)}]
 }
-#plotXYN $x -columns $y1 $y2
 ### TrigTarg tests
 test TrigTargTest-1 {} -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
@@ -302,6 +299,220 @@ test CheckTest-4 {} -body {
 } -result {find doesn't allow deriv} -cleanup {
     unset errorStr
 }
+
+### Integ tests
+test IntegTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -integ {-vec y1 -from 4 -to 25}]
+} -result -1.6445037421079023
+
+test IntegTest-2 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.5 -to 4.5}]
+} -result 31.0 -cleanup {
+    unset xloc yloc
+}
+
+test IntegTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 4}]
+} -result 22.0 -cleanup {
+    unset xloc yloc
+}
+
+test IntegTest-4 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -integ {-vec y1 -from -1 -to 25}} errorStr
+    return $errorStr
+} -result {Start of integration interval '-1.000000' is outside the x values range} -cleanup {
+    unset errorStr
+}
+
+test IntegTest-5 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -integ {-vec y1 -from 1 -to 250}} errorStr
+    return $errorStr
+} -result {End of integration interval '250.000000' is outside the x values range} -cleanup {
+    unset errorStr
+}
+
+test IntegTest-6 {} -body {
+    catch {::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -integ {-vec y1 -from 6 -to 1}} errorStr
+    return $errorStr
+} -result {Start of the integration should be lower than the end of the integration} -cleanup {
+    unset errorStr
+}
+
+test IntegTest-7 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 5}]
+} -result 42.5 -cleanup {
+    unset xloc yloc
+}
+
+test IntegTest-8 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 5 -cum}]
+} -result {x {0.0 1.0 2.0 3.0 5.0} y {0.5 3.0 9.5 22.0 42.5}} -cleanup {
+    unset xloc yloc
+}
+
+### Min tests
+test MinTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -min {-vec y1 -from 4 -to 25}]
+} -result -0.9999902065507035
+
+test MinTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -min {-vec y1}]
+} -result -0.9999902065507035
+
+test MinTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -min {-vec y -from 0.0 -to 5}]
+} -result 0.0 -cleanup {
+    unset xloc yloc
+}
+
+### Max tests
+test MaxTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -max {-vec y1 -from 4 -to 25}]
+} -result 0.9999920733059188
+
+test MaxTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -max {-vec y1}]
+} -result 0.9999952152036801
+
+test MaxTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -max {-vec y -from 0.0 -to 5}]
+} -result 25.0 -cleanup {
+    unset xloc yloc
+}
+
+### Pp tests
+test PpTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -pp {-vec y1 -from 4 -to 25}]
+} -result 1.9999822798566222
+
+test PpTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -pp {-vec y1}]
+} -result 1.9999854217543835
+
+test PpTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -pp {-vec y -from 0.0 -to 5}]
+} -result 25.0 -cleanup {
+    unset xloc yloc
+}
+
+### Minat tests
+test MinatTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -minat {-vec y1 -from 4 -to 25}]
+} -result 11.0
+
+test MinatTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -minat {-vec y1}]
+} -result 11.0
+
+test MinatTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -minat {-vec y -from 0.0 -to 5}]
+} -result 0.0 -cleanup {
+    unset xloc yloc
+}
+
+test MinatTest-4 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -minat {-vec y -from 0.5 -to 5}]
+} -result 0.5 -cleanup {
+    unset xloc yloc
+}
+
+### Maxat tests
+test MaxatTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -maxat {-vec y1 -from 4 -to 25}]
+} -result 7.8500000000000005
+
+test MaxatTest-2 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -maxat {-vec y1}]
+} -result 45.550000000000004
+
+test MaxatTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -maxat {-vec y -from 0.0 -to 5}]
+} -result 5.0 -cleanup {
+    unset xloc yloc
+}
+
+test MaxatTest-4 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -maxat {-vec y -from 0.5 -to 4.5}]
+} -result 4.5 -cleanup {
+    unset xloc yloc
+}
+
+### Between tests
+test BetweenTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -between {-vec y1 -from 4 -to 4.1}]
+} -result {x {4.0 4.0 4.05 4.1} y {-0.7568024953079282 -0.7568024953079282 -0.788525254426195 -0.8182771110644103}}
+
+test BetweenTest-2 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -between {-vec y -from 0.0 -to 4.5}]
+} -result {x {0.0 1 2 3 4 4.5} y {0.0 1 4 9 16 20.5}} -cleanup {
+    unset xloc yloc
+}
+
+test BetweenTest-3 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -between {-vec y -from 0.5 -to 3.5}]
+} -result {x {0.5 1 2 3 3.5} y {0.5 1 4 9 12.5}} -cleanup {
+    unset xloc yloc
+}
+
+### Avg tests
+test AvgTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -avg {-vec y1 -from 4 -to 25}]
+} -result -0.0783097020051382
+
+test AvgTest-2 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -avg {-vec y -from 0.0 -to 5}]
+} -result 8.5 -cleanup {
+    unset xloc yloc
+}
+
+test AvgTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -avg "-vec y1 -from 0.0 -to [= {14*$pi}]"]
+} -result -9.290611878927444e-10
+
+### Rms tests
+test RmsTest-1 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -rms {-vec y1 -from 4 -to 25}]
+} -result 0.7175577777924522
+
+test RmsTest-2 {} -body {
+    set xloc {0 1 2 3 4 5}
+    set yloc {0 1 4 9 16 25}
+    return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -rms {-vec y -from 0.0 -to 5}]
+} -result 11.545561917897285 -cleanup {
+    unset xloc yloc
+}
+
+test RmsTest-3 {} -body {
+    return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -rms "-vec y1 -from 0.0 -to [= {14*$pi}]"]
+} -result 0.7071068035643117
 
 
 cleanupTests

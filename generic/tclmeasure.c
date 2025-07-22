@@ -6,17 +6,6 @@
 #include <string.h>
 #include <tcl.h>
 
-const char *TclGetUnqualifiedName(const char *qualifiedName) {
-    const char *p = qualifiedName;
-    const char *last = qualifiedName;
-
-    while ((p = strstr(p, "::")) != NULL) {
-        p += 2;
-        last = p;
-    }
-    return last;
-}
-
 extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     if (Tcl_InitStubs(interp, "8.6-10.0", 0) == NULL) {
         return TCL_ERROR;
@@ -33,11 +22,9 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindDerivWhen", (Tcl_ObjCmdProc2 *)FindDerivWhenCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindAt", (Tcl_ObjCmdProc2 *)FindAtCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::DerivAt", (Tcl_ObjCmdProc2 *)DerivAtCmdProc2, NULL, NULL);
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Integ", (Tcl_ObjCmdProc2 *)IntegCmdProc2, NULL, NULL); */
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Avg", (Tcl_ObjCmdProc2 *)AvgCmdProc2, NULL, NULL); */
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::Rms", (Tcl_ObjCmdProc2 *)RmsCmdProc2, NULL, NULL); */
-    /* Tcl_CreateObjCommand2(interp, "::tclmeasure::MinMaxPPMinAtMaxAt", (Tcl_ObjCmdProc2 *)MinMaxPPMinAtMaxAtCmdProc2, */
-    /*                       NULL, NULL); */
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::Integ", (Tcl_ObjCmdProc2 *)IntegCmdProc2, NULL, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::MinMaxPPMinAtMaxAt", (Tcl_ObjCmdProc2 *)MinMaxPPMinAtMaxAtCmdProc2,
+                          NULL, NULL);
     return TCL_OK;
 }
 
@@ -49,7 +36,8 @@ static inline double CalcYBetween(double x1, double y1, double x2, double y2, do
 }
 static inline double CalcCrossPoint(double x11, double y11, double x21, double y21, double x12, double y12, double x22,
                                     double y22) {
-    return (y12-(y22-y12)/(x22-x12)*x12-(y11-(y21-y11)/(x21-x11)*x11))/((y21-y11)/(x21-x11)-(y22-y12)/(x22-x12));
+    return (y12 - (y22 - y12) / (x22 - x12) * x12 - (y11 - (y21 - y11) / (x21 - x11) * x11)) /
+           ((y21 - y11) / (x21 - x11) - (y22 - y12) / (x22 - x12));
 }
 
 static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
@@ -138,7 +126,7 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
     } else if (type == 1) {
         return h2 / (h1 * (h1 + h2)) * yim1 - (h1 + h2) / (h1 * h2) * yi + (h1 + 2 * h2) / (h2 * (h1 + h2)) * yip1;
     }
-    //return 0.0;
+    return 0.0;
 }
 
 static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
@@ -226,11 +214,11 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             continue;
         }
         double xip1, trigVecI, trigVecIp1, targVecI, targVecIp1;
-        Tcl_GetDoubleFromObj(interp, xVecElems[i+1], &xip1);
+        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
         Tcl_GetDoubleFromObj(interp, trigVecElems[i], &trigVecI);
-        Tcl_GetDoubleFromObj(interp, trigVecElems[i+1], &trigVecIp1);
+        Tcl_GetDoubleFromObj(interp, trigVecElems[i + 1], &trigVecIp1);
         Tcl_GetDoubleFromObj(interp, targVecElems[i], &targVecI);
-        Tcl_GetDoubleFromObj(interp, targVecElems[i+1], &targVecIp1);
+        Tcl_GetDoubleFromObj(interp, targVecElems[i + 1], &targVecIp1);
         if (!trigVecFoundFlag && (xi >= trigVecDelay)) {
             int result;
             switch ((enum Conditions)trigVecCond) {
@@ -377,7 +365,7 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *result = Tcl_NewDictObj();
     Tcl_DictObjPut(interp, result, Tcl_NewStringObj("xtrig", -1), Tcl_NewDoubleObj(xTrig));
     Tcl_DictObjPut(interp, result, Tcl_NewStringObj("xtarg", -1), Tcl_NewDoubleObj(xTarg));
-    Tcl_DictObjPut(interp, result, Tcl_NewStringObj("xdelta", -1), Tcl_NewDoubleObj(xTarg-xTrig));
+    Tcl_DictObjPut(interp, result, Tcl_NewStringObj("xdelta", -1), Tcl_NewDoubleObj(xTarg - xTrig));
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
 }
@@ -388,9 +376,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     double lastWhenHitCross[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     int lastWhenHitCrossSet = 0;
     double lastFindWhenHit[4] = {0.0, 0.0, 0.0, 0.0};
-    int lastFindWhenHitSet = 0;
     double lastDerYWhenHit[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    int lastDerYWhenHitSet = 0;
     int lastDerYWhenHitPos;
     int xWhenSet = 0;
     Tcl_Obj *xWhenObj = Tcl_NewListObj(0, NULL);
@@ -529,7 +515,6 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             Tcl_GetDoubleFromObj(interp, findVecElems[i], &lastFindWhenHit[1]);
                             lastFindWhenHit[2] = xip1;
                             Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &lastFindWhenHit[3]);
-                            lastFindWhenHitSet = 1;
                         } else if (mode == FDW_SWITCH_DERIVWHEN) {
                             double findVecElemITemp;
                             double findVecElemIp1Temp;
@@ -656,7 +641,6 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                 Tcl_GetDoubleFromObj(interp, findVecElems[i], &lastFindWhenHit[1]);
                                 lastFindWhenHit[2] = xip1;
                                 Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &lastFindWhenHit[3]);
-                                lastFindWhenHitSet = 1;
                             } else if (mode == FDW_SWITCH_DERIVWHEN) {
                                 double findVecElemITemp;
                                 double findVecElemIp1Temp;
@@ -844,7 +828,8 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
         return TCL_ERROR;
     }
     if (xLen != findVecLen) {
-        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of findVec '%ld'", xLen, findVecLen);
+        Tcl_Obj *errorMsg =
+            Tcl_ObjPrintf("Length of x '%ld' is not equal to length of findVec '%ld'", xLen, findVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -860,7 +845,7 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
             yFind = CalcYBetween(xi, findVecI, xip1, findVecIp1, val);
             foundFlag = 1;
             break;
-        } 
+        }
     }
     if (!foundFlag) {
         Tcl_Obj *errorMsg = Tcl_ObjPrintf("Value of the vector at '%f' was not found", val);
@@ -905,13 +890,12 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
             double derivDataTemp[6];
             int derivPosTemp;
             yDeriv = CalcYBetween(xi, derivVecI, xip1, derivVecIp1, val);
-            DerivSelect(interp, i, xi, val, xip1, xLen, xVecElems, derivVecElems, yDeriv, derivDataTemp,
-                        &derivPosTemp);
+            DerivSelect(interp, i, xi, val, xip1, xLen, xVecElems, derivVecElems, yDeriv, derivDataTemp, &derivPosTemp);
             derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3], derivDataTemp[4],
                          derivDataTemp[5], derivPosTemp);
             foundFlag = 1;
             break;
-        } 
+        }
     }
     if (!foundFlag) {
         Tcl_Obj *errorMsg = Tcl_ObjPrintf("Derivative of the vector at '%f' was not found", val);
@@ -921,5 +905,355 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
         Tcl_SetObjResult(interp, Tcl_NewDoubleObj(derY));
         return TCL_OK;
     }
+}
 
+static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    if (objc != 6) {
+        Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend cum");
+        return TCL_ERROR;
+    }
+    Tcl_Size xLen, yLen;
+    Tcl_Obj **xElems, **yElems;
+    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    if (Tcl_ListObjGetElements(interp, objv[2], &yLen, &yElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    double xstart;
+    Tcl_GetDoubleFromObj(interp, objv[3], &xstart);
+    double xend;
+    Tcl_GetDoubleFromObj(interp, objv[4], &xend);
+    int cumFlag;
+    Tcl_GetBooleanFromObj(interp, objv[5], &cumFlag);
+    Tcl_Obj *xCum = NULL;
+    Tcl_Obj *yCum = NULL;
+    if (cumFlag) {
+        xCum = Tcl_NewListObj(0, NULL);
+        yCum = Tcl_NewListObj(0, NULL);
+    }
+    if (xLen != yLen) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of y '%ld'", xLen, yLen);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    }
+    double xActualStart, xActualEnd;
+    Tcl_GetDoubleFromObj(interp, xElems[0], &xActualStart);
+    Tcl_GetDoubleFromObj(interp, xElems[xLen - 1], &xActualEnd);
+    if (xstart < xActualStart) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Start of integration interval '%f' is outside the x values range", xstart);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else if (xend > xActualEnd) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("End of integration interval '%f' is outside the x values range", xend);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else if (xstart >= xend) {
+        Tcl_SetObjResult(
+            interp, Tcl_NewStringObj("Start of the integration should be lower than the end of the integration", -1));
+        return TCL_ERROR;
+    }
+    int startFlagFound = 0;
+    int endFlagFound = 0;
+    double ystart = 0, yend;
+    int istart = 0, iend;
+    double result = 0.0;
+    for (Tcl_Size i = 0; i < xLen - 1; ++i) {
+        double xi, xip1, yi, yip1;
+        Tcl_GetDoubleFromObj(interp, xElems[i], &xi);
+        Tcl_GetDoubleFromObj(interp, xElems[i + 1], &xip1);
+        Tcl_GetDoubleFromObj(interp, yElems[i], &yi);
+        Tcl_GetDoubleFromObj(interp, yElems[i + 1], &yip1);
+        if ((xi <= xstart) && (xip1 >= xstart) && !startFlagFound) {
+            ystart = CalcYBetween(xi, yi, xip1, yip1, xstart);
+            istart = i;
+            startFlagFound = 1;
+        } else if ((xi <= xend) && (xip1 >= xend) && !endFlagFound) {
+            yend = CalcYBetween(xi, yi, xip1, yip1, xend);
+            iend = i;
+            endFlagFound = 1;
+        }
+        if (startFlagFound) {
+            if (i == istart) {
+                xi = xstart;
+                yi = ystart;
+                result = result + (yip1 + yi) / 2.0 * (xip1 - xi);
+                if (cumFlag) {
+                    Tcl_ListObjAppendElement(interp, xCum, Tcl_NewDoubleObj(xi));
+                    Tcl_ListObjAppendElement(interp, yCum, Tcl_NewDoubleObj(result));
+                }
+                continue;
+            } else if (endFlagFound) {
+                if (i == iend) {
+                    xip1 = xend;
+                    yip1 = yend;
+                    result = result + (yip1 + yi) / 2.0 * (xip1 - xi);
+                    if (cumFlag) {
+                        Tcl_ListObjAppendElement(interp, xCum, Tcl_NewDoubleObj(xip1));
+                        Tcl_ListObjAppendElement(interp, yCum, Tcl_NewDoubleObj(result));
+                    }
+                    break;
+                }
+            } else {
+                result = result + (yip1 + yi) / 2.0 * (xip1 - xi);
+                if (cumFlag) {
+                    Tcl_ListObjAppendElement(interp, xCum, Tcl_NewDoubleObj(xi));
+                    Tcl_ListObjAppendElement(interp, yCum, Tcl_NewDoubleObj(result));
+                }
+            }
+        }
+    }
+    if (cumFlag) {
+        Tcl_Obj *resultDict = Tcl_NewDictObj();
+        Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("x", -1), xCum);
+        Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("y", -1), yCum);
+        Tcl_SetObjResult(interp, resultDict);
+        return TCL_OK;
+    } else {
+        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+        return TCL_OK;
+    }
+}
+
+int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
+    if (len <= 0)
+        return TCL_ERROR;
+    double min;
+    if (Tcl_GetDoubleFromObj(interp, objv[0], &min) != TCL_OK)
+        return TCL_ERROR;
+    for (Tcl_Size i = 1; i < len; i++) {
+        double val;
+        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
+            return TCL_ERROR;
+        min = fmin(min, val);
+    }
+    *result = min;
+    return TCL_OK;
+}
+
+int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
+    if (len <= 0)
+        return TCL_ERROR;
+    double max;
+    if (Tcl_GetDoubleFromObj(interp, objv[0], &max) != TCL_OK)
+        return TCL_ERROR;
+    for (Tcl_Size i = 1; i < len; i++) {
+        double val;
+        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
+            return TCL_ERROR;
+        max = fmax(max, val);
+    }
+    *result = max;
+    return TCL_OK;
+}
+
+int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
+    if (len <= 0)
+        return TCL_ERROR;
+    double minVal;
+    if (Tcl_GetDoubleFromObj(interp, objv[0], &minVal) != TCL_OK)
+        return TCL_ERROR;
+    Tcl_Size minIdx = 0;
+    for (Tcl_Size i = 1; i < len; i++) {
+        double val;
+        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
+            return TCL_ERROR;
+        if (val < minVal) {
+            minVal = val;
+            minIdx = i;
+        }
+    }
+    *index = minIdx;
+    return TCL_OK;
+}
+
+int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
+    if (len <= 0)
+        return TCL_ERROR;
+    double maxVal;
+    if (Tcl_GetDoubleFromObj(interp, objv[0], &maxVal) != TCL_OK)
+        return TCL_ERROR;
+    Tcl_Size maxIdx = 0;
+    for (Tcl_Size i = 1; i < len; i++) {
+        double val;
+        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
+            return TCL_ERROR;
+        if (val > maxVal) {
+            maxVal = val;
+            maxIdx = i;
+        }
+    }
+    *index = maxIdx;
+    return TCL_OK;
+}
+
+int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
+    double min, max;
+    if (findMinObj(interp, objv, len, &min) != TCL_OK)
+        return TCL_ERROR;
+    if (findMaxObj(interp, objv, len, &max) != TCL_OK)
+        return TCL_ERROR;
+    *result = fabs(min) + fabs(max);
+    return TCL_OK;
+}
+
+Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
+                   Tcl_Obj *lastObj) {
+    Tcl_Obj **elemPtrs;
+    Tcl_Size listLen;
+    Tcl_ListObjGetElements(interp, listObj, &listLen, &elemPtrs);
+    if (start >= listLen) {
+        start = listLen;
+    }
+    if (end >= listLen) {
+        end = listLen - 1;
+    }
+    if (start > end || start >= listLen) {
+        return Tcl_NewListObj(0, NULL);
+    }
+    Tcl_Size rangeLen = end - start + 1;
+    Tcl_Obj *resultList = Tcl_NewListObj(0, NULL);
+    Tcl_ListObjAppendElement(interp, resultList, firstObj);
+    Tcl_ListObjAppendList(interp, resultList, Tcl_NewListObj(rangeLen, &elemPtrs[start]));
+    Tcl_ListObjAppendElement(interp, resultList, lastObj);
+    return resultList;
+}
+
+static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    if (objc != 6) {
+        Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend type");
+        return TCL_ERROR;
+    }
+    Tcl_Size xLen, yLen;
+    Tcl_Obj **xElems, **yElems;
+    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    if (Tcl_ListObjGetElements(interp, objv[2], &yLen, &yElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    double xstart;
+    Tcl_GetDoubleFromObj(interp, objv[3], &xstart);
+    double xend;
+    Tcl_GetDoubleFromObj(interp, objv[4], &xend);
+    int type;
+    const char *typeStr = Tcl_GetString(objv[5]);
+    if (!strcmp(typeStr, "min")) {
+        type = TYPE_MIN;
+    } else if (!strcmp(typeStr, "max")) {
+        type = TYPE_MAX;
+    } else if (!strcmp(typeStr, "pp")) {
+        type = TYPE_PP;
+    } else if (!strcmp(typeStr, "minat")) {
+        type = TYPE_MINAT;
+    } else if (!strcmp(typeStr, "maxat")) {
+        type = TYPE_MAXAT;
+    } else if (!strcmp(typeStr, "between")) {
+        type = TYPE_BETWEEN;
+    } else {
+        return TCL_ERROR;
+    }
+    if (xLen != yLen) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of y '%ld'", xLen, yLen);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    }
+    double xActualStart, xActualEnd;
+    Tcl_GetDoubleFromObj(interp, xElems[0], &xActualStart);
+    Tcl_GetDoubleFromObj(interp, xElems[xLen - 1], &xActualEnd);
+    if (xstart < xActualStart) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Start of integration interval '%f' is outside the x values range", xstart);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else if (xend > xActualEnd) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("End of integration interval '%f' is outside the x values range", xend);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
+    } else if (xstart >= xend) {
+        Tcl_SetObjResult(
+            interp, Tcl_NewStringObj("Start of the integration should be lower than the end of the integration", -1));
+        return TCL_ERROR;
+    }
+    int startFlagFound = 0;
+    int endFlagFound = 0;
+    double ystart = 0, yend;
+    int istart = 0, iend;
+    for (Tcl_Size i = 0; i < xLen - 1; ++i) {
+        double xi, xip1, yi, yip1;
+        Tcl_GetDoubleFromObj(interp, xElems[i], &xi);
+        Tcl_GetDoubleFromObj(interp, xElems[i + 1], &xip1);
+        Tcl_GetDoubleFromObj(interp, yElems[i], &yi);
+        Tcl_GetDoubleFromObj(interp, yElems[i + 1], &yip1);
+        if ((xi <= xstart) && (xip1 >= xstart) && !startFlagFound) {
+            ystart = CalcYBetween(xi, yi, xip1, yip1, xstart);
+            istart = i;
+            startFlagFound = 1;
+        } else if ((xi <= xend) && (xip1 >= xend) && !endFlagFound) {
+            yend = CalcYBetween(xi, yi, xip1, yip1, xend);
+            iend = i;
+            endFlagFound = 1;
+            break;
+        }
+    }
+    Tcl_Obj *targetArrayObjs;
+    Tcl_Obj **targetArrayObjsElems;
+    Tcl_Size targetArrayLen;
+    if (endFlagFound) {
+        targetArrayObjs =
+            ListRange(interp, objv[2], istart + 1, iend, Tcl_NewDoubleObj(ystart), Tcl_NewDoubleObj(yend));
+        if (Tcl_ListObjGetElements(interp, targetArrayObjs, &targetArrayLen, &targetArrayObjsElems) == TCL_ERROR) {
+            return TCL_ERROR;
+        }
+        double result;
+        Tcl_Obj *targetXArrayObjs;
+        Tcl_Obj **targetXArrayObjsElems;
+        Tcl_Size targetXArrayLen;
+        switch ((enum Types)type) {
+        case TYPE_MIN:
+            findMinObj(interp, targetArrayObjsElems, targetArrayLen, &result);
+            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+            break;
+        case TYPE_MAX:
+            findMaxObj(interp, targetArrayObjsElems, targetArrayLen, &result);
+            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+            break;
+        case TYPE_PP:
+            findPPObj(interp, targetArrayObjsElems, targetArrayLen, &result);
+            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+            break;
+        case TYPE_MINAT:
+            targetXArrayObjs =
+                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
+            if (Tcl_ListObjGetElements(interp, targetXArrayObjs, &targetXArrayLen, &targetXArrayObjsElems) ==
+                TCL_ERROR) {
+                return TCL_ERROR;
+            }
+            Tcl_Size minIndex;
+            findMinIndexObj(interp, targetArrayObjsElems, targetArrayLen, &minIndex);
+            Tcl_SetObjResult(interp, targetXArrayObjsElems[minIndex]);
+            break;
+        case TYPE_MAXAT:
+            targetXArrayObjs =
+                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
+            if (Tcl_ListObjGetElements(interp, targetXArrayObjs, &targetXArrayLen, &targetXArrayObjsElems) ==
+                TCL_ERROR) {
+                return TCL_ERROR;
+            }
+            Tcl_Size maxIndex;
+            findMaxIndexObj(interp, targetArrayObjsElems, targetArrayLen, &maxIndex);
+            Tcl_SetObjResult(interp, targetXArrayObjsElems[maxIndex]);
+            break;
+        case TYPE_BETWEEN:
+            targetXArrayObjs =
+                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
+            Tcl_Obj *resultDict = Tcl_NewDictObj();
+            Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("x", -1), targetXArrayObjs);
+            Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("y", -1), targetArrayObjs);
+            Tcl_SetObjResult(interp, resultDict);
+            break;
+        };
+        return TCL_OK;
+    } else {
+        return TCL_ERROR;
+    }
 }

@@ -1,0 +1,333 @@
+'\"
+'\" '\" Copyright (c) George Yashin
+'\"
+.TH "tclmeasure" 3tcl 0\&.5 "tclmeasure" "Collection of Tcl tools"
+.SH NAME
+tclmeasure - Commands in namespace tclmeasure
+.SH SYNOPSIS
+\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-at value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value ?-find|deriv value? -when {-vec value -val value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value ?-find|deriv value? -when {-vec1 value -vec2 value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -find value -at value\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -deriv value -at value\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -avg|rms|pp|min|max|minat|maxat|between {-vec value ?-td value? ?-from value? ?-to value?}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -integ {-vec value ?-td value? ?-from value? ?-to value? ?-cum?}\fP
+.br
+.SH ::TCLMEASURE
+.SH COMMANDS
+.PP
+.RS -4n
+\fBmeasure\fR (::tclmeasure)
+.RE
+.PP
+Does different measurements of input data lists\&.
+.RS 4n\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-at value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value ?-find|deriv value? -when {-vec value -val value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value ?-find|deriv value? -when {-vec1 value -vec2 value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -find value -at value\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -deriv value -at value\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -avg|rms|pp|min|max|minat|maxat|between {-vec value ?-td value? ?-from value? ?-to value?}\fP
+.br
+\fBmeasure\fP \fI-xname value -data value -integ {-vec value ?-td value? ?-from value? ?-to value? ?-cum?}\fP
+.br
+.RE
+.PP
+\fBParameters\fR
+.RS 4n
+.TP
+-at
+Time for -find or -deriv\&.
+.TP
+-avg
+Contains conditions for finding average value across the interval\&.
+.TP
+-between
+Contains conditions for fetching data in the interval\&.
+.TP
+-data
+Dictionary that contains lists with names as the keys and lists as the values\&.
+.TP
+-deriv
+Contains conditions for deriv (see below), requires -when or -at\&.
+.TP
+-find
+Contains conditions for find (see below), requires -when or -at\&.
+.TP
+-max
+Contains conditions for finding maximum value in the interval\&.
+.TP
+-maxat
+Contains conditions for finding time of maximum value in the interval\&.
+.TP
+-min
+Contains conditions for finding minimum value in the interval\&.
+.TP
+-minat
+Contains conditions for finding time of minimum value in the interval\&.
+.TP
+-pp
+Contains conditions for finding peak to peak value in the interval\&.
+.TP
+-rms
+Contains conditions for finding root meas square value across the interval\&.
+.TP
+-targ
+Contains conditions for target (see below), requires -trig\&.
+.TP
+-trig
+Contains conditions for trigger (see below), selects Trigger-Target measurement, requires -targ\&.
+.TP
+-when
+Contains conditions for when (see below)
+.TP
+-xname
+Name of x list in data dictionary\&. This list must be strictly increaing without duplicate elements\&.
+.RE
+.PP
+\fBDescription\fR
+.PP
+This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each mod
+could have different forms:
+.PP
+\fB\fBTrigger-Target\fP\fR
+.PP
+In this mode it measures the difference in x list between two points selected from one or two input lists
+(vectors)\&. First it searches for the trigger point along x list (vector) with certain value of input list,
+or certain x axis value, second it searches for the target point with with certain value of input list, or
+certain x axis value, and finally calculates difference between trigger and target point along x axis\&.
+The conditions for trigger and target could be in two forms: hit of certain value by specified vector, or
+certain exact point on x axis\&. These conditions are provided as a list of arguments to -trig and -targ switches:
+.RS 4n
+.TP
+-vec
+Name of vector in data dictionary\&.
+.TP
+-val
+Value to match\&.
+.TP
+-td
+X axis delay after which the search is start, default is 0\&.0\&.
+.TP
+-cross
+Condition's count, cross conditions counts every time vector crosses value, and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.TP
+-rise
+Condition's count, rise conditions counts every time vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.TP
+-fall
+Condition's count, fall conditions counts every time vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.RE
+.PP
+or
+.RS 4n
+.TP
+-at
+Exact x value\&.
+.RE
+.PP
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
+.fi
+.RE
+.PP
+Here we use x key value as x axis, trigger vector point is when y1 crosses value 0\&.1, third rise, and target
+vector point is when y2 crosses value 0\&.5, fifth fall\&.
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
+.fi
+.RE
+.PP
+Here we use x key value as x axis, trigger vector point is when y1 crosses value 0\&.7, second rise, and target point
+is value 20\&.0 at x axis\&.
+.PP
+In this mode procedure returns dictionary with keys xtrig, xtarg, xdelta and corresponding values\&.
+.PP
+\fB\fBFind-When\fP or \fBDeriv-When\fP\fR
+.PP
+In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses a given value\&.
+Measurements start after a delay -td and may be restricted to a range between -from and -to\&. Possible
+combinations of switches are -when {\&.\&.\&.} or -find {\&.\&.\&.} -when {\&.\&.\&.}\&. For -when the possible switches are:
+.RS 4n
+.TP
+-vec
+Name of vector in data dictionary\&.
+.TP
+-val
+Value to match\&.
+.TP
+-td
+X axis delay after which the search is start, default is 0\&.0\&.
+.TP
+-from
+Start of the range in which search happens, default is minimum value of x\&.
+.TP
+-to
+End of the range in which search happens, default is maximum value of x\&.
+.TP
+-cross
+Condition's count, cross conditions counts every time vector crosses value, and saves only n-th crossing the value\&. The possible values are positive integers, all or last string\&.
+.TP
+-rise
+Condition's count, rise conditions counts every time vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value\&. The possible values are positive integers, all or last string\&.
+.TP
+-fall
+Condition's count, fall conditions counts every time vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value\&. The possible values are positive integers, all or last string\&.
+.RE
+.PP
+or
+.RS 4n
+.TP
+-vec1
+Name of first vector in data dictionary\&.
+.TP
+-vec2
+Name of second vector in data dictionary\&.
+.TP
+-td
+X axis delay after which the search is start, default is 0\&.0\&.
+.TP
+-from
+Start of the range in which search happens, default is minimum value of x\&.
+.TP
+-to
+End of the range in which search happens, default is maximum value of x\&.
+.TP
+-cross
+Condition's count, cross conditions counts every time -vec1 vector crosses value, and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.TP
+-rise
+Condition's count, rise conditions counts every time -vec1 vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.TP
+-fall
+Condition's count, fall conditions counts every time -vec1 vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value\&. The possible values are positive integers, or last string\&.
+.RE
+.PP
+For -find and -deriv we specify the vector name in data dictionary for which values (or derivative) should be
+found at when point\&.
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
+.fi
+.RE
+.PP
+Here we use x key value as x axis, find vector is y1, and point is when vector y2 crosses value 0\&.5, fifth fall\&.
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
+.fi
+.RE
+.PP
+Here we use x key value as x axis, find vector is y1, and point is when vector y1 crosses y2, fifth fall of y1
+vector\&.
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
+.fi
+.RE
+.PP
+Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
+\fI1,30\fP\&.
+In this mode procedure returns dictionary with keys xwhen, and yfind if -find switch is specified, and
+corresponding values\&.
+.PP
+\fB\fBFind-At\fP\fR
+.PP
+In this mode it finds value of the vector at specified time\&.
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
+.fi
+.RE
+.PP
+\fB\fBDeriv-At\fP\fR
+.PP
+In this mode it finds value of the vector's derivative at specified time\&.
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
+.fi
+.RE
+.PP
+\fB\fBAvg|Rms|Min|Max|PP|MinAt|MaxAt|Between\fP\fR
+.PP
+This mode is combination of many modes with the same interface\&.
+.RS 4n
+.TP
+-vec
+Name of vector in data dictionary\&.
+.TP
+-from
+Start of the range in which search happens, default is minimum value of x\&.
+.TP
+-to
+End of the range in which search happens, default is maximum value of x\&.
+.RE
+.PP
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+.fi
+.RE
+.PP
+In \fBBetween\fP mode, the x and y values are returned within specified interval\&.
+.PP
+\fB\fBInteg\fP\fR
+.PP
+This mode is combination of many modes with the same interface\&.
+.RS 4n
+.TP
+-vec
+Name of vector in data dictionary\&.
+.TP
+-from
+Start of the integration range, default is minimum value of x\&.
+.TP
+-to
+End of the integration range, default is maximum value of x\&.
+.TP
+-cum
+Optional flag to return cumulative integration result list instead of thhe final value\&.
+.RE
+.PP
+Examples of usages:
+.PP
+.RS 4n
+.nf
+::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+.fi
+.RE
+

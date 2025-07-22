@@ -1,5 +1,5 @@
-package require argparse 0.58-
-package provide tclmeasure 0.1
+package require argparse 0.60-
+package provide tclmeasure 0.5
 
 namespace eval ::tclmeasure {
 
@@ -440,4 +440,15 @@ proc ::tclmeasure::measure {args} {
         FromTo $resDict $data $xname
         return [::tclmeasure::MinMaxPPMinAtMaxAt [dget $data $xname] [dget $data [dget $resDict vec]] $from $to $type]
     }
+}
+
+proc ::tclmeasure::Avg {x y xstart xend} {
+    set integral [Integ $x $y $xstart $xend false]
+    return [= {$integral/($xend-$xstart)}]
+}
+
+proc ::tclmeasure::Rms {x y xstart xend} {
+    set ySq [lmap yVal $y {= {$yVal*$yVal}}]
+    set integral [Integ $x $ySq $xstart $xend false]
+    return [= {sqrt($integral/($xend-$xstart))}]
 }
