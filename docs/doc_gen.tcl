@@ -8,15 +8,14 @@ source [file join $docDir startPage.ruff]
 source [file join $sourceDir tclmeasure.tcl]
 
 set packageVersion [package versions tclmeasure]
-set title "Collection of Tcl tools"
+set title "tclmeasure package"
 set commonHtml [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
-                        -includesource true -pagesplit namespace -autopunctuate true -compact false\
-                        -includeprivate true -product tclmeasure -excludeprocs {^[A-Z].*}\
-                        -diagrammer "ditaa --border-width 1" -version $packageVersion -copyright "George Yashin"\
-                        {*}$::argv]
-set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
-                         -pagesplit namespace -autopunctuate true -compact false -includeprivate true -product tclmeasure\
-                         -excludeprocs {^[A-Z].*} -diagrammer "ditaa --border-width 1" -version $packageVersion\
+                        -includesource true -autopunctuate true -compact false -includeprivate true -product tclmeasure\
+                        -excludeprocs {^[A-Z].*} -diagrammer "ditaa --border-width 1" -version $packageVersion\
+                        -copyright "George Yashin" {*}$::argv]
+set commonNroff [list -title $title -sortnamespaces false  -recurse false -autopunctuate true -compact false\
+                         -includeprivate true -product tclmeasure -excludeprocs {^[A-Z].*}\
+                         -diagrammer "ditaa --border-width 1" -version $packageVersion\
                          -copyright "George Yashin" {*}$::argv]
 set namespaces [list ::tclmeasure]
 

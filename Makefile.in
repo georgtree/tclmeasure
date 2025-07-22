@@ -158,7 +158,7 @@ install-libraries: libraries
 install-doc:
 	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
 	@echo "Installing documentation in $(DESTDIR)$(mandir)"
-	@list='$(srcdir)/docs/*.n'; for i in $$list; do \
+	@list='$(srcdir)/docs/tclmeasure.n'; for i in $$list; do \
 	    echo "Installing $$i"; \
 	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
 	done
