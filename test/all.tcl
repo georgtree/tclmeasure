@@ -14,4 +14,3 @@ set dir [file normalize [file dirname [info script]]]
 package require tclmeasure
 configure {*}$argv -testdir $dir
 runAllTests
-

@@ -4,7 +4,7 @@ package provide tclmeasure 0.5
 namespace eval ::tclmeasure {
 
     namespace import ::tcl::mathop::*
-    namespace export tclmeasure
+    namespace export measure
     interp alias {} dget {} dict get
     interp alias {} @ {} lindex
     interp alias {} = {} expr
