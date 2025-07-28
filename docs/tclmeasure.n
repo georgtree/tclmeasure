@@ -105,8 +105,8 @@ Name of x list in data dictionary\&. This list must be strictly increaing withou
 .PP
 \fBDescription\fR
 .PP
-This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each mod
-could have different forms:
+This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each
+mod could have different forms:
 .PP
 \fB\fBTrigger-Target\fP\fR
 .PP
@@ -168,9 +168,10 @@ In this mode procedure returns dictionary with keys xtrig, xtarg, xdelta and cor
 .PP
 \fB\fBFind-When\fP or \fBDeriv-When\fP\fR
 .PP
-In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses a given value\&.
-Measurements start after a delay -td and may be restricted to a range between -from and -to\&. Possible
-combinations of switches are -when {\&.\&.\&.} or -find {\&.\&.\&.} -when {\&.\&.\&.}\&. For -when the possible switches are:
+In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses
+a given value\&. Measurements start after a delay -td and may be restricted to a range between -from and -to\&.
+Possible combinations of switches are -when {\&.\&.\&.} or -find {\&.\&.\&.} -when {\&.\&.\&.}\&. For -when the possible
+switches are:
 .RS 4n
 .TP
 -vec

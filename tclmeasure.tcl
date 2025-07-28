@@ -55,8 +55,8 @@ proc ::tclmeasure::measure {args} {
     #  -minat - contains conditions for finding time of minimum value in the interval
     #  -maxat - contains conditions for finding time of maximum value in the interval
     #  -between - contains conditions for fetching data in the interval
-    # This procedure imitates the .meas command from SPICE3 and Ngspice in particular. It has mutiple modes, and each mod
-    #  could have different forms:
+    # This procedure imitates the .meas command from SPICE3 and Ngspice in particular. It has mutiple modes, and each
+    #  mod could have different forms:
     #  ###### **Trigger-Target**
     #  In this mode it measures the difference in x list between two points selected from one or two input lists 
     #  (vectors). First it searches for the trigger point along x list (vector) with certain value of input list,
@@ -82,7 +82,8 @@ proc ::tclmeasure::measure {args} {
     #
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3} -targ {-vec y2 -val 0.5 -fall 5}
+    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
+                                           -targ {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.1, third rise, and target 
     # vector point is when y2 crosses value 0.5, fifth fall.
@@ -95,13 +96,16 @@ proc ::tclmeasure::measure {args} {
     # In this mode procedure returns dictionary with keys `xtrig`, `xtarg`, `xdelta` and corresponding values.
     # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\}
     #   -targ \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    # Synopsis: -xname value -data value -trig \{-at value\} -targ \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\} -targ \{-at value\}
+    # Synopsis: -xname value -data value -trig \{-at value\}
+    #            -targ \{-vec value -val value ?-td value? -cross|rise|fall value\}
+    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\}
+    #            -targ \{-at value\}
     #
     #  ###### **Find-When** or **Deriv-When**
-    #  In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses a given value. 
-    #  Measurements start after a delay `-td` and may be restricted to a range between `-from` and `-to`. Possible
-    #  combinations of switches are `-when {...}` or `-find {...} -when {...}`. For `-when` the possible switches are:
+    #  In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses 
+    #  a given value. Measurements start after a delay `-td` and may be restricted to a range between `-from` and `-to`.
+    #  Possible combinations of switches are `-when {...}` or `-find {...} -when {...}`. For `-when` the possible 
+    #  switches are:
     #   -vec - name of vector in data dictionary
     #   -val - value to match
     #   -td - x axis delay after which the search is start, default is 0.0.
