@@ -1,7 +1,7 @@
 set path_to_hl_tcl "/home/georgtree/tcl/hl_tcl"
-package require ruff
+source /home/georgtree/tcl/ruff/src/ruff.tcl
 package require fileutil
-package require hl_tcl
+source [file join $path_to_hl_tcl hl_tcl_html.tcl]
 set docDir [file dirname [file normalize [info script]]]
 set sourceDir "${docDir}/.."
 source [file join $docDir startPage.ruff]
@@ -13,8 +13,8 @@ set commonHtml [list -title $title -sortnamespaces false -preamble $startPage -p
                         -includesource true -autopunctuate true -compact false -includeprivate true -product tclmeasure\
                         -excludeprocs {^[A-Z].*} -diagrammer "ditaa --border-width 1" -version $packageVersion\
                         -copyright "George Yashin" {*}$::argv]
-set commonNroff [list -title $title -sortnamespaces false  -recurse false -autopunctuate true -compact false\
-                         -includeprivate true -product tclmeasure -excludeprocs {^[A-Z].*}\
+set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -recurse false -autopunctuate true\
+                         -compact true -includeprivate false -product tclmeasure -excludeprocs {^[A-Z].*}\
                          -diagrammer "ditaa --border-width 1" -version $packageVersion\
                          -copyright "George Yashin" {*}$::argv]
 set namespaces [list ::tclmeasure]
@@ -24,12 +24,45 @@ if {[llength $argv] == 0 || "html" in $argv} {
     ruff::document $namespaces -format nroff -outdir $docDir -outfile tclmeasure.n {*}$commonNroff
 }
 
+# add new command keywords to hl_tcl
+lappend ::hl_tcl::my::data(CMD_TCL) measure
+set ::hl_tcl::my::data(CMD_TCL) [lsort $::hl_tcl::my::data(CMD_TCL)]
+
 foreach file [glob ${docDir}/*.html] {
-    exec tclsh "${path_to_hl_tcl}/tcl_html.tcl" [file join ${docDir} $file]
+    ::hl_tcl_html::highlight $file no \
+        {<pre class='ruff'>} </pre> \
+        <div id='*' class='ruff_dyn_src'><pre> </pre> \
+        <code> </code>  
 }
+
+# change default width
+proc processContentsCss {fileContents} {
+    return [string map [list max-width:60rem max-width:100rem "overflow-wrap:break-word" "overflow-wrap:normal"]\
+                    $fileContents]
+}
+# change default theme 
+proc processContentsJs {fileContents} {
+    return [string map {init()\{currentTheme=localStorage.ruff_theme init()\{currentTheme=currentTheme="v1"}\
+                    $fileContents]
+}
+
+fileutil::updateInPlace [file join $docDir assets ruff-min.css] processContentsCss
+fileutil::updateInPlace [file join $docDir assets ruff-min.js] processContentsJs
 
 proc processContents {fileContents} {
-    return [string map {max-width:60rem max-width:100rem} $fileContents]
+    global path chartsMap
+    dict for {mark file} $chartsMap {
+        set fileData [fileutil::cat [file join $path $file]]
+        set fileContents [string map [list $mark $fileData] $fileContents]
+    }
+    return $fileContents
 }
-
-fileutil::updateInPlace [file join $docDir assets ruff-min.css] processContents
+set tableWrapping {
+    .ruff-bd table.ruff_deflist th:first-child,
+    .ruff-bd table.ruff_deflist td:first-child {
+        white-space: nowrap;      /* never wrap */
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+}
+::fileutil::appendToFile [file join $docDir assets ruff-min.css] $tableWrapping

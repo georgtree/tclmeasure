@@ -23,6 +23,55 @@ Introduction - tclmeasure package
 .br
 \fBmeasure\fP \fI-xname value -data value -integ {-vec value ?-td value? ?-from value? ?-to value? ?-cum?}\fP
 .br
+.SH CONTENT
+.TP
+\(bu
+\fIEmulation of measure command in SPICE\fP [URL: https://georgtree\&.github\&.io/tclmeasure/index-tclmeasure\&.html]
+.SH "INSTALLATION AND DEPENDENCIES"
+.PP
+For building you need:
+.TP
+\(bu
+\fITcl9\fP [URL: https://www\&.tcl\&.tk/software/tcltk/9\&.0\&.html] or \fITcl8\&.6\&.15\fP [URL: https://www\&.tcl\&.tk/software/tcltk/8\&.6\&.html]
+.TP
+\(bu
+\fIgcc compiler\fP [URL: https://gcc\&.gnu\&.org/]
+.TP
+\(bu
+\fImake tool\fP [URL: https://www\&.gnu\&.org/software/make/]
+.PP
+For run you also need:
+.TP
+\(bu
+\fIargparse\fP [URL: https://github\&.com/georgtree/argparse]
+.TP
+\(bu
+\fITcllib\fP [URL: https://www\&.tcl\&.tk/software/tcllib/]
+.PP
+To build run
+.PP
+.RS 4n
+.nf
+\&./configure
+make
+sudo make install
+.fi
+.RE
+.PP
+If you have different versions of Tcl on the same machine, you can set the path to this version with -with-tcl=path
+flag to configure script\&.
+.PP
+For Windows build it is strongly recommended to use \fIMSYS64 UCRT64 environment\fP [URL: https://www\&.msys2\&.org/], the above
+steps are identical if you run it from UCRT64 shell\&.
+.PP
+There are prebuilt packages that contains \&.so/\&.dll files, tcl code and tests for Windows and Linux\&.
+.SH "SUPPORTED PLATFORMS"
+.PP
+Any OS that has tcl8\&.6/tcl9\&.0 (Linux, Windows, FreeBSD)\&.
+.SH DOCUMENTATION
+.PP
+You can find some documentation \fIhere\fP [URL: https://georgtree\&.github\&.io/tclmeasure]\&.
+Also on Linux you can open manpages installed after run of make install\&.
 .SH ::TCLMEASURE
 .SH COMMANDS
 .PP
@@ -31,7 +80,8 @@ Introduction - tclmeasure package
 .RE
 .PP
 Does different measurements of input data lists\&.
-.RS 4n\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.RS 4n
+\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
 \fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
@@ -148,7 +198,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -157,7 +207,7 @@ vector point is when y2 crosses value 0\&.5, fifth fall\&.
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
 .fi
 .RE
 .PP
@@ -229,11 +279,12 @@ Condition's count, fall conditions counts every time -vec1 vector crosses value 
 .PP
 For -find and -deriv we specify the vector name in data dictionary for which values (or derivative) should be
 found at when point\&.
+.PP
 Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -241,7 +292,7 @@ Here we use x key value as x axis, find vector is y1, and point is when vector y
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
 .fi
 .RE
 .PP
@@ -250,23 +301,23 @@ vector\&.
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
 .fi
 .RE
 .PP
 Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
-\fI1,30\fP\&.
-In this mode procedure returns dictionary with keys xwhen, and yfind if -find switch is specified, and
-corresponding values\&.
+\fI1,30\fP\&.  In this mode procedure returns dictionary with keys xwhen, and yfind if -find switch is specified,
+and corresponding values\&.
 .PP
 \fB\fBFind-At\fP\fR
 .PP
 In this mode it finds value of the vector at specified time\&.
+.PP
 Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
 .fi
 .RE
 .PP
@@ -277,7 +328,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
 .fi
 .RE
 .PP
@@ -300,7 +351,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 .PP
@@ -328,7 +379,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 

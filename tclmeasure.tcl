@@ -82,119 +82,131 @@ proc ::tclmeasure::measure {args} {
     #
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
-                                           -targ {-vec y2 -val 0.5 -fall 5}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3} -targ {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.1, third rise, and target 
     # vector point is when y2 crosses value 0.5, fifth fall.
+    #
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.7 -rise 2} -targ {-at 20.0}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.7 -rise 2} -targ {-at 20.0}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.7, second rise, and target point 
     # is value 20.0 at x axis.
     # 
     # In this mode procedure returns dictionary with keys `xtrig`, `xtarg`, `xdelta` and corresponding values.
-    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    #   -targ \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    # Synopsis: -xname value -data value -trig \{-at value\}
-    #            -targ \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\}
-    #            -targ \{-at value\}
     #
-    #  ###### **Find-When** or **Deriv-When**
-    #  In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses 
-    #  a given value. Measurements start after a delay `-td` and may be restricted to a range between `-from` and `-to`.
-    #  Possible combinations of switches are `-when {...}` or `-find {...} -when {...}`. For `-when` the possible 
-    #  switches are:
-    #   -vec - name of vector in data dictionary
-    #   -val - value to match
-    #   -td - x axis delay after which the search is start, default is 0.0.
-    #   -from - start of the range in which search happens, default is minimum value of x.
-    #   -to - end of the range in which search happens, default is maximum value of x.
-    #   -cross - condition's count, cross conditions counts every time vector crosses value, and saves
-    #     only n-th crossing the value. The possible values are positive integers, `all` or `last` string.
-    #   -rise - condition's count, rise conditions counts every time vector crosses value from lower to higher
-    #     (rising slope), and saves only n-th crossing the value. The possible values are positive integers, `all` or
-    #     `last` string.
-    #   -fall - condition's count, fall conditions counts every time vector crosses value from higher to lower
-    #     (falling slope), and saves only n-th crossing the value. The possible values are positive integers, `all` or 
-    #     `last` string.
+    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\} -targ \{-vec
+    # value -val value ?-td value? -cross|rise|fall value\}
+    # Synopsis: -xname value -data value -trig \{-at value\} -targ \{-vec value -val value ?-td value? -cross|rise|fall
+    # value\}
+    # Synopsis: -xname value -data value -trig \{-vec value -val value ?-td value? -cross|rise|fall value\} -targ \{-at
+    # value\}
     #
-    #  or
+    # ###### **Find-When** or **Deriv-When**
+    # In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses 
+    # a given value. Measurements start after a delay `-td` and may be restricted to a range between `-from` and `-to`.
+    # Possible combinations of switches are `-when {...}` or `-find {...} -when {...}`. For `-when` the possible 
+    # switches are:
+    #  -vec - name of vector in data dictionary
+    #  -val - value to match
+    #  -td - x axis delay after which the search is start, default is 0.0.
+    #  -from - start of the range in which search happens, default is minimum value of x.
+    #  -to - end of the range in which search happens, default is maximum value of x.
+    #  -cross - condition's count, cross conditions counts every time vector crosses value, and saves
+    #    only n-th crossing the value. The possible values are positive integers, `all` or `last` string.
+    #  -rise - condition's count, rise conditions counts every time vector crosses value from lower to higher
+    #    (rising slope), and saves only n-th crossing the value. The possible values are positive integers, `all` or
+    #    `last` string.
+    #  -fall - condition's count, fall conditions counts every time vector crosses value from higher to lower
+    #    (falling slope), and saves only n-th crossing the value. The possible values are positive integers, `all` or 
+    #    `last` string.
     #
-    #   -vec1 - name of first vector in data dictionary
-    #   -vec2 - name of second vector in data dictionary
-    #   -td - x axis delay after which the search is start, default is 0.0.
-    #   -from - start of the range in which search happens, default is minimum value of x.
-    #   -to - end of the range in which search happens, default is maximum value of x.
-    #   -cross - condition's count, cross conditions counts every time `-vec1` vector crosses value, and saves
-    #     only n-th crossing the value. The possible values are positive integers, or `last` string.
-    #   -rise - condition's count, rise conditions counts every time `-vec1` vector crosses value from lower to higher
-    #     (rising slope), and saves only n-th crossing the value. The possible values are positive integers, or `last` 
+    # or
+    #
+    #  -vec1 - name of first vector in data dictionary
+    #  -vec2 - name of second vector in data dictionary
+    #  -td - x axis delay after which the search is start, default is 0.0.
+    #  -from - start of the range in which search happens, default is minimum value of x.
+    #  -to - end of the range in which search happens, default is maximum value of x.
+    #  -cross - condition's count, cross conditions counts every time `-vec1` vector crosses value, and saves
+    #    only n-th crossing the value. The possible values are positive integers, or `last` string.
+    #  -rise - condition's count, rise conditions counts every time `-vec1` vector crosses value from lower to higher
+    #    (rising slope), and saves only n-th crossing the value. The possible values are positive integers, or `last` 
     #     string.
-    #   -fall - condition's count, fall conditions counts every time `-vec1` vector crosses value from higher to lower
-    #     (falling slope), and saves only n-th crossing the value. The possible values are positive integers, or `last` 
-    #     string.
+    #  -fall - condition's count, fall conditions counts every time `-vec1` vector crosses value from higher to lower
+    #    (falling slope), and saves only n-th crossing the value. The possible values are positive integers, or `last` 
+    #    string.
     #
-    #  For `-find` and `-deriv` we specify the vector name in data dictionary for which values (or derivative) should be
-    #  found at `when` point.
+    # For `-find` and `-deriv` we specify the vector name in data dictionary for which values (or derivative) should be
+    # found at `when` point.
+    #
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0.5 -fall 5}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, find vector is y1, and point is when vector y2 crosses value 0.5, fifth fall.
+    #
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
     # ```
     # Here we use x key value as x axis, find vector is y1, and point is when vector y1 crosses y2, fifth fall of y1 
     # vector.
+    #
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
     # ```
-    # Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is 
-    # [1,30].
-    # In this mode procedure returns dictionary with keys `xwhen`, and `yfind` if `-find` switch is specified, and 
-    # corresponding values.
+    # Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
+    # [1,30].  In this mode procedure returns dictionary with keys `xwhen`, and `yfind` if `-find` switch is specified,
+    # and corresponding values.
+    #
     # Synopsis: -xname value -data value ?-find|deriv value? -when \{-vec value -val value ?-td value? ?-from value? 
     #   ?-to value? -cross|rise|fall value\}
     # Synopsis: -xname value -data value ?-find|deriv value? -when \{-vec1 value -vec2 value ?-td value? ?-from value? 
     #   ?-to value? -cross|rise|fall value\}
-    #  ###### **Find-At**
-    #  In this mode it finds value of the vector at specified time.
+    #
+    # ###### **Find-At**
+    # In this mode it finds value of the vector at specified time.
+    #
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
     # ```
+    #
     # Synopsis: -xname value -data value -find value -at value
-    #  ###### **Deriv-At**
-    #  In this mode it finds value of the vector's derivative at specified time.
+    #
+    # ###### **Deriv-At**
+    # In this mode it finds value of the vector's derivative at specified time.
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
     # ```
+    #
     # Synopsis: -xname value -data value -deriv value -at value
-    #  ###### **Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between**
-    #  This mode is combination of many modes with the same interface.
-    #   -vec - name of vector in data dictionary
-    #   -from - start of the range in which search happens, default is minimum value of x.
-    #   -to - end of the range in which search happens, default is maximum value of x.
+    #
+    # ###### **Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between**
+    # This mode is combination of many modes with the same interface.
+    #  -vec - name of vector in data dictionary
+    #  -from - start of the range in which search happens, default is minimum value of x.
+    #  -to - end of the range in which search happens, default is maximum value of x.
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
     # ```
     # In **Between** mode, the x and y values are returned within specified interval.
     # Synopsis: -xname value -data value -avg|rms|pp|min|max|minat|maxat|between \{-vec value ?-td value? ?-from value?
     #   ?-to value?\}
-    #  ###### **Integ**
-    #  This mode is combination of many modes with the same interface.
-    #   -vec - name of vector in data dictionary
-    #   -from - start of the integration range, default is minimum value of x.
-    #   -to - end of the integration range, default is maximum value of x.
-    #   -cum - optional flag to return cumulative integration result list instead of thhe final value
+    #
+    # ###### **Integ**
+    # This mode is combination of many modes with the same interface.
+    #  -vec - name of vector in data dictionary
+    #  -from - start of the integration range, default is minimum value of x.
+    #  -to - end of the integration range, default is maximum value of x.
+    #  -cum - optional flag to return cumulative integration result list instead of thhe final value
     # Examples of usages:
     # ```
-    # ::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+    # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
     # ```
+    #
     # Synopsis: -xname value -data value -integ \{-vec value ?-td value? ?-from value? ?-to value? ?-cum?\}
     set keysList {trig targ find when at integ deriv avg min max pp rms minat maxat between}
     argparse -help {Does different measurements of input data lists. This procedure imitates the .meas command from\
