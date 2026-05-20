@@ -2,7 +2,6 @@ package require argparse 0.60-
 package provide tclmeasure 0.5
 
 namespace eval ::tclmeasure {
-
     namespace import ::tcl::mathop::*
     namespace export measure
     interp alias {} dget {} dict get
@@ -81,13 +80,13 @@ proc ::tclmeasure::measure {args} {
     #   -at - exact x value
     #
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3} -targ {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.1, third rise, and target 
     # vector point is when y2 crosses value 0.5, fifth fall.
     #
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.7 -rise 2} -targ {-at 20.0}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.7, second rise, and target point 
@@ -141,18 +140,18 @@ proc ::tclmeasure::measure {args} {
     # found at `when` point.
     #
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, find vector is y1, and point is when vector y2 crosses value 0.5, fifth fall.
     #
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
     # ```
     # Here we use x key value as x axis, find vector is y1, and point is when vector y1 crosses y2, fifth fall of y1 
     # vector.
     #
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
     # ```
     # Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
@@ -168,7 +167,7 @@ proc ::tclmeasure::measure {args} {
     # In this mode it finds value of the vector at specified time.
     #
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
     # ```
     #
@@ -177,7 +176,7 @@ proc ::tclmeasure::measure {args} {
     # ###### **Deriv-At**
     # In this mode it finds value of the vector's derivative at specified time.
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
     # ```
     #
@@ -189,7 +188,7 @@ proc ::tclmeasure::measure {args} {
     #  -from - start of the range in which search happens, default is minimum value of x.
     #  -to - end of the range in which search happens, default is maximum value of x.
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
     # ```
     # In **Between** mode, the x and y values are returned within specified interval.
@@ -203,7 +202,7 @@ proc ::tclmeasure::measure {args} {
     #  -to - end of the integration range, default is maximum value of x.
     #  -cum - optional flag to return cumulative integration result list instead of thhe final value
     # Examples of usages:
-    # ```
+    # ```tcl
     # measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
     # ```
     #

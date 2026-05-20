@@ -1,7 +1,7 @@
 '\"
 '\" '\" Copyright (c) George Yashin
 '\"
-.TH "tclmeasure" 3tcl 0\&.5 "tclmeasure" "Collection of Tcl tools"
+.TH "tclmeasure" 3tcl 0\&.5 "tclmeasure" "tclmeasure package"
 .SH NAME
 tclmeasure - Commands in namespace tclmeasure
 .SH SYNOPSIS
@@ -31,7 +31,8 @@ tclmeasure - Commands in namespace tclmeasure
 .RE
 .PP
 Does different measurements of input data lists\&.
-.RS 4n\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
+.RS 4n
+\fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
 \fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
@@ -105,8 +106,8 @@ Name of x list in data dictionary\&. This list must be strictly increaing withou
 .PP
 \fBDescription\fR
 .PP
-This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each mod
-could have different forms:
+This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each
+mod could have different forms:
 .PP
 \fB\fBTrigger-Target\fP\fR
 .PP
@@ -148,7 +149,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -157,7 +158,7 @@ vector point is when y2 crosses value 0\&.5, fifth fall\&.
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
 .fi
 .RE
 .PP
@@ -168,9 +169,10 @@ In this mode procedure returns dictionary with keys xtrig, xtarg, xdelta and cor
 .PP
 \fB\fBFind-When\fP or \fBDeriv-When\fP\fR
 .PP
-In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses a given value\&.
-Measurements start after a delay -td and may be restricted to a range between -from and -to\&. Possible
-combinations of switches are -when {\&.\&.\&.} or -find {\&.\&.\&.} -when {\&.\&.\&.}\&. For -when the possible switches are:
+In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses
+a given value\&. Measurements start after a delay -td and may be restricted to a range between -from and -to\&.
+Possible combinations of switches are -when {\&.\&.\&.} or -find {\&.\&.\&.} -when {\&.\&.\&.}\&. For -when the possible
+switches are:
 .RS 4n
 .TP
 -vec
@@ -228,11 +230,12 @@ Condition's count, fall conditions counts every time -vec1 vector crosses value 
 .PP
 For -find and -deriv we specify the vector name in data dictionary for which values (or derivative) should be
 found at when point\&.
+.PP
 Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -240,7 +243,7 @@ Here we use x key value as x axis, find vector is y1, and point is when vector y
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
 .fi
 .RE
 .PP
@@ -249,23 +252,23 @@ vector\&.
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
 .fi
 .RE
 .PP
 Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
-\fI1,30\fP\&.
-In this mode procedure returns dictionary with keys xwhen, and yfind if -find switch is specified, and
-corresponding values\&.
+\fI1,30\fP\&.  In this mode procedure returns dictionary with keys xwhen, and yfind if -find switch is specified,
+and corresponding values\&.
 .PP
 \fB\fBFind-At\fP\fR
 .PP
 In this mode it finds value of the vector at specified time\&.
+.PP
 Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
 .fi
 .RE
 .PP
@@ -276,7 +279,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
 .fi
 .RE
 .PP
@@ -299,7 +302,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 .PP
@@ -327,7 +330,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-::measure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Content &#8212; tclmeasure  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="::tclmeasure" href="tclmeasure-tclmeasure.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tclmeasure-tclmeasure.html" title="::tclmeasure"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Content</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="content">
+<span id="r-content"></span><h1>Content<a class="headerlink" href="#content" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference external" href="https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html">Emulation of measure command in SPICE</a></p></li>
+</ul>
+</section>
+<section id="installation-and-dependencies">
+<span id="r-installation-and-dependencies"></span><span id="r-installation20and20dependencies"></span><h1>Installation and dependencies<a class="headerlink" href="#installation-and-dependencies" title="Link to this heading">¶</a></h1>
+<p>For building you need:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.tcl.tk/software/tcltk/9.0.html">Tcl9</a> or <a class="reference external" href="https://www.tcl.tk/software/tcltk/8.6.html">Tcl8.6.15</a></p></li>
+<li><p><a class="reference external" href="https://gcc.gnu.org/">gcc compiler</a></p></li>
+<li><p><a class="reference external" href="https://www.gnu.org/software/make/">make tool</a></p></li>
+</ul>
+<p>For run you also need:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/georgtree/argparse">argparse</a></p></li>
+<li><p><a class="reference external" href="https://www.tcl.tk/software/tcllib/">Tcllib</a></p></li>
+</ul>
+<p>To build run</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./configure
+make
+sudo<span class="w"> </span>make<span class="w"> </span>install
+</pre></div>
+</div>
+<p>If you have different versions of Tcl on the same machine, you can set the path to this version with <code class="docutils literal notranslate"><span class="pre">-with-tcl=path</span></code>
+flag to configure script.</p>
+<p>For Windows build it is strongly recommended to use <a class="reference external" href="https://www.msys2.org/">MSYS64 UCRT64 environment</a>, the above
+steps are identical if you run it from UCRT64 shell.</p>
+<p>There are prebuilt packages that contains .so/.dll files, tcl code and tests for Windows and Linux.</p>
+</section>
+<section id="supported-platforms">
+<span id="r-supported-platforms"></span><span id="r-supported20platforms"></span><h1>Supported platforms<a class="headerlink" href="#supported-platforms" title="Link to this heading">¶</a></h1>
+<p>Any OS that has tcl8.6/tcl9.0 (Linux, Windows, FreeBSD).</p>
+</section>
+<section id="documentation">
+<span id="r-documentation"></span><h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h1>
+<p>You can find some documentation <a class="reference external" href="https://georgtree.github.io/tclmeasure">here</a>.
+Also on Linux you can open manpages installed after run of <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code>.</p>
+<hr class="docutils" />
+<p class="centered">
+<strong>Copyright (c) George Yashin</strong></p></section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Content</a></li>
+<li><a class="reference internal" href="#installation-and-dependencies">Installation and dependencies</a></li>
+<li><a class="reference internal" href="#supported-platforms">Supported platforms</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="index.html"
+                          title="previous chapter">&lt;no title&gt;</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="tclmeasure-tclmeasure.html"
+                          title="next chapter">::tclmeasure</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tclmeasure.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tclmeasure-tclmeasure.html" title="::tclmeasure"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Content</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright George Yashin.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>

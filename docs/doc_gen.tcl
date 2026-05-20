@@ -1,68 +1,46 @@
-set path_to_hl_tcl "/home/georgtree/tcl/hl_tcl"
-source /home/georgtree/tcl/ruff/src/ruff.tcl
+
+package require ruff
+#source /home/georgtree/tcl/ruff/src/ruff.tcl
 package require fileutil
-source [file join $path_to_hl_tcl hl_tcl_html.tcl]
+
 set docDir [file dirname [file normalize [info script]]]
-set sourceDir "${docDir}/.."
+set sourceDir "${docDir}/../"
 source [file join $docDir startPage.ruff]
 source [file join $sourceDir tclmeasure.tcl]
 
 set packageVersion [package versions tclmeasure]
 set title "tclmeasure package"
-set commonHtml [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
-                        -includesource true -autopunctuate true -compact false -includeprivate true -product tclmeasure\
-                        -excludeprocs {^[A-Z].*} -diagrammer "ditaa --border-width 1" -version $packageVersion\
-                        -copyright "George Yashin" {*}$::argv]
-set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -recurse false -autopunctuate true\
-                         -compact true -includeprivate false -product tclmeasure -excludeprocs {^[A-Z].*}\
-                         -diagrammer "ditaa --border-width 1" -version $packageVersion\
-                         -copyright "George Yashin" {*}$::argv]
+set commonSphinx [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
+                        -includesource false -pagesplit namespace -autopunctuate true -compact false\
+                        -excludeprocs {^[A-Z].*} -includeprivate false -product tclmeasure -diagrammer\
+                        "ditaa --border-width 1" -version $packageVersion -copyright "George Yashin" {*}$::argv]
+set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
+                         -pagesplit namespace -autopunctuate true -compact true -includeprivate false \
+                         -excludeprocs {^[A-Z].*} -product tclmeasure -diagrammer "ditaa --border-width 1"\
+                         -version $packageVersion -copyright "George Yashin" {*}$::argv]
 set namespaces [list ::tclmeasure]
 
-if {[llength $argv] == 0 || "html" in $argv} {
-    ruff::document $namespaces -format html -outdir $docDir -outfile index.html {*}$commonHtml
-    ruff::document $namespaces -format nroff -outdir $docDir -outfile tclmeasure.n {*}$commonNroff
-}
+ruff::document $namespaces -format sphinx -outdir [file join $docDir sphinx] {*}$commonSphinx
+ruff::document $namespaces -format nroff -outdir $docDir -outfile tclmeasure.n {*}$commonNroff
 
-# add new command keywords to hl_tcl
-lappend ::hl_tcl::my::data(CMD_TCL) measure
-set ::hl_tcl::my::data(CMD_TCL) [lsort $::hl_tcl::my::data(CMD_TCL)]
+::fileutil::appendToFile [file join $docDir sphinx conf.py] {html_theme = "classic"
+extensions = [
+    "sphinx.ext.githubpages",
+]
+from pygments.lexers.tcl import TclLexer
+from pygments.token import Operator
 
-foreach file [glob ${docDir}/*.html] {
-    ::hl_tcl_html::highlight $file no \
-        {<pre class='ruff'>} </pre> \
-        <div id='*' class='ruff_dyn_src'><pre> </pre> \
-        <code> </code>  
-}
+class MyTclLexer(TclLexer):
+    def get_tokens_unprocessed(self, text):
+        for i, t, v in super().get_tokens_unprocessed(text):
+            if v == "=":
+                yield i, Operator, v   # or Name.Builtin
+            else:
+                yield i, t, v
 
-# change default width
-proc processContentsCss {fileContents} {
-    return [string map [list max-width:60rem max-width:100rem "overflow-wrap:break-word" "overflow-wrap:normal"]\
-                    $fileContents]
+def setup(app):
+    from sphinx.highlighting import lexers
+    lexers["tcl"] = MyTclLexer()
 }
-# change default theme 
-proc processContentsJs {fileContents} {
-    return [string map {init()\{currentTheme=localStorage.ruff_theme init()\{currentTheme=currentTheme="v1"}\
-                    $fileContents]
-}
-
-fileutil::updateInPlace [file join $docDir assets ruff-min.css] processContentsCss
-fileutil::updateInPlace [file join $docDir assets ruff-min.js] processContentsJs
-
-proc processContents {fileContents} {
-    global path chartsMap
-    dict for {mark file} $chartsMap {
-        set fileData [fileutil::cat [file join $path $file]]
-        set fileContents [string map [list $mark $fileData] $fileContents]
-    }
-    return $fileContents
-}
-set tableWrapping {
-    .ruff-bd table.ruff_deflist th:first-child,
-    .ruff-bd table.ruff_deflist td:first-child {
-        white-space: nowrap;      /* never wrap */
-        overflow-wrap: normal;
-        word-break: normal;
-    }
-}
-::fileutil::appendToFile [file join $docDir assets ruff-min.css] $tableWrapping
+catch {exec sphinx-build -b html [file join $docDir sphinx] [file join $docDir]} errorStr
+puts $errorStr

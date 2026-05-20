@@ -1,6 +1,6 @@
 # Content
 
-- [Emulation of measure command in SPICE](https://georgtree.github.io/tclmeasure/index-tclmeasure.html)
+- [Emulation of measure command in SPICE](https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html)
 
 # Installation and dependencies
 

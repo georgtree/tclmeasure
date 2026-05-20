@@ -1,55 +1,108 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>tclmeasure package</title>
-<link rel='stylesheet' type='text/css' href='assets/ruff-min.css' />
-<script type='text/javascript' src='assets/ruff-min.js'></script>
-</head>
-<body>
-<div class='ruff-layout'>
-<header class='ruff-layout-header ruff-hd'>
-<a style='text-decoration:none;' href='index.html'>tclmeasure package (v0.5)</a>
+<!DOCTYPE html>
 
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-            <div id="ruffButtonBar">
-            <button id="ruffNavMove" onclick="ruffMoveNavPane()"></button>
-            <button id="ruffToggleTheme" onclick="ruffNextTheme()"></button>
-            </div>
-        </header><main class='ruff-layout-main ruff-bd'><h1 class='ruff'><a name='Content'></a>Content<span class='ruff-uplink'><a href='#top'>Top</a>, <a href='index.html'>Main</a>, <a href='index-docindex.html#'>Index</a></span></h1>
-<div style='clear:both;'></div>
-<ul class='ruff'>
-<li><a href="https://georgtree.github.io/tclmeasure/index-tclmeasure.html" >Emulation of measure command in SPICE</a></li>
+    <title>&lt;no title&gt; &#8212; tclmeasure  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Content" href="tclmeasure.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tclmeasure.html" title="Content"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html">Content</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#installation-and-dependencies">Installation and dependencies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#supported-platforms">Supported platforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#documentation">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure-tclmeasure.html">::tclmeasure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tclmeasure-tclmeasure.html#commands">Commands</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tclmeasure-tclmeasure.html#measure"><code class="docutils literal notranslate"><span class="pre">measure</span></code></a></li>
 </ul>
-<h1 class='ruff'><a name='Installation and dependencies'></a>Installation and dependencies<span class='ruff-uplink'><a href='#top'>Top</a>, <a href='index.html'>Main</a>, <a href='index-docindex.html#'>Index</a></span></h1>
-<div style='clear:both;'></div>
-<p class='ruff'>For building you need:</p>
-<ul class='ruff'>
-<li><a href="https://www.tcl.tk/software/tcltk/9.0.html" >Tcl9</a> or <a href="https://www.tcl.tk/software/tcltk/8.6.html" >Tcl8.6.15</a></li>
-<li><a href="https://gcc.gnu.org/" >gcc compiler</a></li>
-<li><a href="https://www.gnu.org/software/make/" >make tool</a></li>
+</li>
 </ul>
-<p class='ruff'>For run you also need:</p>
-<ul class='ruff'>
-<li><a href="https://github.com/georgtree/argparse" >argparse</a></li>
-<li><a href="https://www.tcl.tk/software/tcllib/" >Tcllib</a></li>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
 </ul>
-<p class='ruff'>To build run</p>
+</div>
 
-<figure  class='ruff-snippet ruff-figure'><pre class='ruff'>./configure
-make
-sudo make install
-</pre>
 
-</figure><p class='ruff'>If you have different versions of Tcl on the same machine, you can set the path to this version with <code><font color=#463e11>-with-tcl</font>=path</code> flag to configure script.</p>
-<p class='ruff'>For Windows build it is strongly recommended to use <a href="https://www.msys2.org/" >MSYS64 UCRT64 environment</a>, the above steps are identical if you run it from UCRT64 shell.</p>
-<p class='ruff'>There are prebuilt packages that contains .so/.dll files, tcl code and tests for Windows and Linux.</p>
-<h1 class='ruff'><a name='Supported platforms'></a>Supported platforms<span class='ruff-uplink'><a href='#top'>Top</a>, <a href='index.html'>Main</a>, <a href='index-docindex.html#'>Index</a></span></h1>
-<div style='clear:both;'></div>
-<p class='ruff'>Any OS that has tcl8.6/tcl9.0 (Linux, Windows, FreeBSD).</p>
-<h1 class='ruff'><a name='Documentation'></a>Documentation<span class='ruff-uplink'><a href='#top'>Top</a>, <a href='index.html'>Main</a>, <a href='index-docindex.html#'>Index</a></span></h1>
-<div style='clear:both;'></div>
-<p class='ruff'>You can find some documentation <a href="https://georgtree.github.io/tclmeasure" >here</a>. Also on Linux you can open manpages installed after run of <code>make install</code>.</p>
-</main><nav class='ruff-nav'><ul ><li class='ruff-toc1'><a class='ruff-highlight' style='padding-top:2px;' href='index.html'>Start page</a></li>
-<li class='ruff-toc1'><a href='index-docindex.html' accesskey='i'>Index</a></li>
-<hr>
-<li class='ruff-toc1'><a href='index-tclmeasure.html'>tclmeasure</a></li>
-<hr></ul></nav><footer class='ruff-layout-footer ruff-ft'><div style='float: right;'>Document generated by <a href='https://ruff.magicsplat.com'>Ruff!</a></div><div>&copy; George Yashin</div></footer>
-</div></body></html>
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="tclmeasure.html"
+                          title="next chapter">Content</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tclmeasure.html" title="Content"
+             >next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright George Yashin.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>

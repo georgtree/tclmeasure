@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>::tclmeasure &#8212; tclmeasure  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Content" href="tclmeasure.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tclmeasure.html" title="Content"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">::tclmeasure</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="tclmeasure">
+<span id="r-tclmeasure"></span><span id="r-3a3atclmeasure"></span><h1>::tclmeasure<a class="headerlink" href="#tclmeasure" title="Link to this heading">¶</a></h1>
+<section id="commands">
+<span id="r-tclmeasure-commands"></span><span id="r-3a3atclmeasureqzcommands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
+<section id="measure">
+<span id="r-3a3atclmeasure3a3ameasure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading">¶</a></h3>
+<p>Does different measurements of input data lists.</p>
+<pre class="literal-block"><strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
+<strong>measure</strong> <em>-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
+<strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-at value}</em>
+<strong>measure</strong> <em>-xname value -data value ?-find|deriv value? -when {-vec value -val value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}</em>
+<strong>measure</strong> <em>-xname value -data value ?-find|deriv value? -when {-vec1 value -vec2 value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}</em>
+<strong>measure</strong> <em>-xname value -data value -find value -at value</em>
+<strong>measure</strong> <em>-xname value -data value -deriv value -at value</em>
+<strong>measure</strong> <em>-xname value -data value -avg|rms|pp|min|max|minat|maxat|between {-vec value ?-td value? ?-from value? ?-to value?}</em>
+<strong>measure</strong> <em>-xname value -data value -integ {-vec value ?-td value? ?-from value? ?-to value? ?-cum?}</em></pre>
+<p class="rubric">Parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-at</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Time for -find or -deriv.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-avg</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding average value across the interval.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-between</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for fetching data in the interval.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-data</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary that contains lists with names as the keys and lists as the values.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-deriv</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for deriv (see below), requires -when or -at.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-find</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for find (see below), requires -when or -at.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-max</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding maximum value in the interval.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-maxat</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding time of maximum value in the interval.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-min</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding minimum value in the interval.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-minat</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding time of minimum value in the interval.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-pp</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding peak to peak value in the interval.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-rms</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding root meas square value across the interval.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-targ</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for target (see below), requires -trig.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-trig</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for trigger (see below), selects Trigger-Target measurement, requires -targ.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-when</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for when (see below)</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-xname</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Name of x list in data dictionary. This list must be strictly increaing without duplicate elements.</p>
+</dd>
+</dl>
+<p class="rubric">Description</p>
+<p>This procedure imitates the .meas command from SPICE3 and Ngspice in particular. It has mutiple modes, and each
+mod could have different forms:</p>
+<p class="rubric"><strong>Trigger-Target</strong></p>
+<p>In this mode it measures the difference in x list between two points selected from one or two input lists
+(vectors). First it searches for the trigger point along x list (vector) with certain value of input list,
+or certain x axis value, second it searches for the target point with with certain value of input list, or
+certain x axis value, and finally calculates difference between trigger and target point along x axis.
+The conditions for trigger and target could be in two forms: hit of certain value by specified vector, or
+certain exact point on x axis. These conditions are provided as a list of arguments to -trig and -targ switches:</p>
+<dl class="field-list simple">
+<dt class="field-odd">-vec<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+</dd>
+<dt class="field-even">-val<span class="colon">:</span></dt>
+<dd class="field-even"><p>Value to match.</p>
+</dd>
+<dt class="field-odd">-td<span class="colon">:</span></dt>
+<dd class="field-odd"><p>X axis delay after which the search is start, default is 0.0.</p>
+</dd>
+<dt class="field-even">-cross<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, cross conditions counts every time vector crosses value, and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-odd">-rise<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Condition’s count, rise conditions counts every time vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-even">-fall<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, fall conditions counts every time vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+</dl>
+<p>or</p>
+<dl class="field-list simple">
+<dt class="field-odd">-at<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Exact x value.</p>
+</dd>
+</dl>
+<p>Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.1</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">3</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y2<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>fall<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.1, third rise, and target
+vector point is when y2 crosses value 0.5, fifth fall.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.7</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">2</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-at</span><span class="w"> </span><span class="mf">20.0</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.7, second rise, and target point
+is value 20.0 at x axis.</p>
+<p>In this mode procedure returns dictionary with keys <code class="docutils literal notranslate"><span class="pre">xtrig</span></code>, <code class="docutils literal notranslate"><span class="pre">xtarg</span></code>, <code class="docutils literal notranslate"><span class="pre">xdelta</span></code> and corresponding values.</p>
+<p class="rubric"><strong>Find-When</strong> or <strong>Deriv-When</strong></p>
+<p>In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses
+a given value. Measurements start after a delay <code class="docutils literal notranslate"><span class="pre">-td</span></code> and may be restricted to a range between <code class="docutils literal notranslate"><span class="pre">-from</span></code> and <code class="docutils literal notranslate"><span class="pre">-to</span></code>.
+Possible combinations of switches are <code class="docutils literal notranslate"><span class="pre">-when</span> <span class="pre">{...}</span></code> or <code class="docutils literal notranslate"><span class="pre">-find</span> <span class="pre">{...}</span> <span class="pre">-when</span> <span class="pre">{...}</span></code>. For <code class="docutils literal notranslate"><span class="pre">-when</span></code> the possible
+switches are:</p>
+<dl class="field-list simple">
+<dt class="field-odd">-vec<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+</dd>
+<dt class="field-even">-val<span class="colon">:</span></dt>
+<dd class="field-even"><p>Value to match.</p>
+</dd>
+<dt class="field-odd">-td<span class="colon">:</span></dt>
+<dd class="field-odd"><p>X axis delay after which the search is start, default is 0.0.</p>
+</dd>
+<dt class="field-even">-from<span class="colon">:</span></dt>
+<dd class="field-even"><p>Start of the range in which search happens, default is minimum value of x.</p>
+</dd>
+<dt class="field-odd">-to<span class="colon">:</span></dt>
+<dd class="field-odd"><p>End of the range in which search happens, default is maximum value of x.</p>
+</dd>
+<dt class="field-even">-cross<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, cross conditions counts every time vector crosses value, and saves only n-th crossing the value. The possible values are positive integers, <code class="docutils literal notranslate"><span class="pre">all</span></code> or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-odd">-rise<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Condition’s count, rise conditions counts every time vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value. The possible values are positive integers, <code class="docutils literal notranslate"><span class="pre">all</span></code> or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-even">-fall<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, fall conditions counts every time vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value. The possible values are positive integers, <code class="docutils literal notranslate"><span class="pre">all</span></code> or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+</dl>
+<p>or</p>
+<dl class="field-list simple">
+<dt class="field-odd">-vec1<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of first vector in data dictionary.</p>
+</dd>
+<dt class="field-even">-vec2<span class="colon">:</span></dt>
+<dd class="field-even"><p>Name of second vector in data dictionary.</p>
+</dd>
+<dt class="field-odd">-td<span class="colon">:</span></dt>
+<dd class="field-odd"><p>X axis delay after which the search is start, default is 0.0.</p>
+</dd>
+<dt class="field-even">-from<span class="colon">:</span></dt>
+<dd class="field-even"><p>Start of the range in which search happens, default is minimum value of x.</p>
+</dd>
+<dt class="field-odd">-to<span class="colon">:</span></dt>
+<dd class="field-odd"><p>End of the range in which search happens, default is maximum value of x.</p>
+</dd>
+<dt class="field-even">-cross<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, cross conditions counts every time <code class="docutils literal notranslate"><span class="pre">-vec1</span></code> vector crosses value, and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-odd">-rise<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Condition’s count, rise conditions counts every time <code class="docutils literal notranslate"><span class="pre">-vec1</span></code> vector crosses value from lower to higher (rising slope), and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+<dt class="field-even">-fall<span class="colon">:</span></dt>
+<dd class="field-even"><p>Condition’s count, fall conditions counts every time <code class="docutils literal notranslate"><span class="pre">-vec1</span></code> vector crosses value from higher to lower (falling slope), and saves only n-th crossing the value. The possible values are positive integers, or <code class="docutils literal notranslate"><span class="pre">last</span></code> string.</p>
+</dd>
+</dl>
+<p>For <code class="docutils literal notranslate"><span class="pre">-find</span></code> and <code class="docutils literal notranslate"><span class="pre">-deriv</span></code> we specify the vector name in data dictionary for which values (or derivative) should be
+found at <code class="docutils literal notranslate"><span class="pre">when</span></code> point.</p>
+<p>Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>find<span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>when<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y2<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>fall<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>Here we use x key value as x axis, find vector is y1, and point is when vector y2 crosses value 0.5, fifth fall.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>find<span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>when<span class="w"> </span><span class="k">{</span><span class="nv">-vec1</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>vec2<span class="w"> </span>y2<span class="w"> </span><span class="o">-</span>fall<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>Here we use x key value as x axis, find vector is y1, and point is when vector y1 crosses y2, fifth fall of y1
+vector.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>when<span class="w"> </span><span class="k">{</span><span class="nv">-vec1</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>vec2<span class="w"> </span>y2<span class="w"> </span><span class="o">-</span>fall<span class="w"> </span>last<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">30</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>Here we use x key value as x axis, point is when vector y1 crosses y2, last fall of y1 vector, searching range is
+[1,30].  In this mode procedure returns dictionary with keys <code class="docutils literal notranslate"><span class="pre">xwhen</span></code>, and <code class="docutils literal notranslate"><span class="pre">yfind</span></code> if <code class="docutils literal notranslate"><span class="pre">-find</span></code> switch is specified,
+and corresponding values.</p>
+<p class="rubric"><strong>Find-At</strong></p>
+<p>In this mode it finds value of the vector at specified time.</p>
+<p>Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>find<span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>at<span class="w"> </span><span class="mi">5</span>
+</pre></div>
+</div>
+<p class="rubric"><strong>Deriv-At</strong></p>
+<p>In this mode it finds value of the vector’s derivative at specified time.
+Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>deriv<span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>at<span class="w"> </span><span class="mi">5</span>
+</pre></div>
+</div>
+<p class="rubric"><strong>Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between</strong></p>
+<p>This mode is combination of many modes with the same interface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">-vec<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+</dd>
+<dt class="field-even">-from<span class="colon">:</span></dt>
+<dd class="field-even"><p>Start of the range in which search happens, default is minimum value of x.</p>
+</dd>
+<dt class="field-odd">-to<span class="colon">:</span></dt>
+<dd class="field-odd"><p>End of the range in which search happens, default is maximum value of x.</p>
+</dd>
+</dl>
+<p>Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>avg<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
+</pre></div>
+</div>
+<p>In <strong>Between</strong> mode, the x and y values are returned within specified interval.</p>
+<p class="rubric"><strong>Integ</strong></p>
+<p>This mode is combination of many modes with the same interface.</p>
+<dl class="field-list simple">
+<dt class="field-odd">-vec<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+</dd>
+<dt class="field-even">-from<span class="colon">:</span></dt>
+<dd class="field-even"><p>Start of the integration range, default is minimum value of x.</p>
+</dd>
+<dt class="field-odd">-to<span class="colon">:</span></dt>
+<dd class="field-odd"><p>End of the integration range, default is maximum value of x.</p>
+</dd>
+<dt class="field-even">-cum<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional flag to return cumulative integration result list instead of thhe final value.</p>
+</dd>
+</dl>
+<p>Examples of usages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nv">dcreate</span><span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>avg<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
+</pre></div>
+</div>
+<hr class="docutils" />
+<p class="centered">
+<strong>Copyright (c) George Yashin</strong></p></section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">::tclmeasure</a><ul>
+<li><a class="reference internal" href="#commands">Commands</a><ul>
+<li><a class="reference internal" href="#measure"><code class="docutils literal notranslate"><span class="pre">measure</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="tclmeasure.html"
+                          title="previous chapter">Content</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tclmeasure-tclmeasure.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tclmeasure.html" title="Content"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">tclmeasure  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">::tclmeasure</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright George Yashin.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>
