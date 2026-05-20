@@ -5,6 +5,85 @@ namespace import ::tclmeasure::*
 package require math::constants
 ::math::constants::constants radtodeg degtorad pi
 
+set atol 1e-15
+set rtol 1e-14
+set dictOrderStrict false
+
+proc matchList {expected actual} {
+    variable atol
+    variable rtol
+    set match true
+    if {[llength $expected]!=[llength $actual]} {
+        set match false
+        return $match
+    }
+    foreach exp $expected act $actual {
+        if {[string is double -strict $exp] && [string is double -strict $act]} {
+            if {abs($act-$exp)>($atol+$rtol*abs($exp))} {
+                set match false
+                break
+            }
+        } else {
+            if {$exp ne $act} {
+                set match false
+                break
+            }
+        }
+    }
+    return $match
+}
+
+proc matchDict {expected actual} {
+    variable atol
+    variable rtol
+    variable dictOrderStrict
+    set match true
+    if {[dict size $expected]!=[dict size $actual]} {
+        set match false
+        return $match
+    }
+    if {$dictOrderStrict} {
+        foreach exp $expected act $actual {
+            if {[string is double -strict $exp] && [string is double -strict $act]} {
+                if {abs($act-$exp)>($atol+$rtol*abs($exp))} {
+                    set match false
+                    break
+                }
+            } else {
+                if {$exp ne $act} {
+                    set match false
+                    break
+                }
+            }
+        }
+    } else {
+        dict for {expKey expVal} $expected {
+            if {[dict exists $actual $expKey]} {
+                set actVal [dict get $actual $expKey]
+                if {[string is double -strict $expVal] && [string is double -strict $actVal]} {
+                    if {abs($actVal-$expVal)>($atol+$rtol*abs($expVal))} {
+                        set match false
+                        break
+                    }
+                } else {
+                    if {$expVal ne $actVal} {
+                        set match false
+                        break
+                    }
+                }
+            } else {
+                set match false
+                break
+            }
+        }
+    }
+    return $match
+}
+
+customMatch matchList matchList
+customMatch matchDict matchDict
+
+
 for {set i 0} {$i<=1000} {incr i} {
     set xi [= {$i*0.05}]
     lappend x $xi
@@ -19,27 +98,27 @@ for {set i -500} {$i<=500} {incr i} {
     lappend y2sym [= {cos($xi)}]
 }
 ### TrigTarg tests
-test TrigTargTest-1 {} -body {
+test TrigTargTest-1 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
                   -targ {-vec y2 -val 0.5 -fall 5}]
 } -result {xtrig 12.666567432668222 xtarg 26.17976390163929 xdelta 13.513196468971069}
 
-test TrigTargTest-2 {} -body {
+test TrigTargTest-2 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.7 -rise 2}\
                   -targ {-at 20.0}]
 } -result {xtrig 7.058761869929844 xtarg 20.0 xdelta 12.941238130070156}
 
-test TrigTargTest-3 {} -body {
+test TrigTargTest-3 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-at 5.01}\
                     -targ {-vec y2 -val 0.5 -cross 2}]
 } -result {xtrig 5.01 xtarg 5.236130584737532 xdelta 0.22613058473753256}
 
-test TrigTargTest-4 {} -body {
+test TrigTargTest-4 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec x -val 5.01 -rise 1}\
                   -targ {-vec y2 -val 0.5 -fall last}]
 } -result {xtrig 5.01 xtarg 45.029318738629485 xdelta 40.01931873862949}
 
-test TrigTargTest-5 {} -body {
+test TrigTargTest-5 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise last}\
                   -targ {-vec y2 -val 0.5 -fall last}]
 } -result {xtrig 44.08249174375871 xtarg 45.029318738629485 xdelta 0.9468269948707757}
@@ -57,52 +136,52 @@ test TrigTargTest-7 {} -body {
 } -result {Targ value '-0.100000' with conditions 'fall 20 delay=0.000000' was not found}
 
 ### FindWhen tests
-test FindWhenTest-1 {} -body {
+test FindWhenTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0.5 -fall 5}]
 } -result 0.8656776653169641
 
-test FindWhenTest-2 {} -body {
+test FindWhenTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
                     -when {-vec y2 -val 0.5 -fall all}]
 } -result {0.8659480349968515 0.865680229712564 0.8657418826412921 0.8659366421684264 0.8656776653169641\
                    0.8657478888140752 0.8659254860082891 0.8656753304879521}
 
-test FindWhenTest-3 {} -body {
+test FindWhenTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec y2 -val 0.5 -fall 5}]
 } -result 26.17976390163929
 
-test FindWhenTest-4 {} -body {
+test FindWhenTest-4 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec y2 -val 0.5 -fall all}]
 } -result {1.0471578743251442 7.330209181364409 13.613428264764178 19.896707975918524 26.17976390163929\
                    32.46298722138866 38.74625820457005 45.029318738629485}
 
-test FindWhenTest-5 {} -body {
+test FindWhenTest-5 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}]
 } -result -0.706968221057803
 
-test FindWhenTest-6 {} -body {
+test FindWhenTest-6 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
                     -when {-vec1 y1 -vec2 y2 -fall all}]
 } -result {-0.7068872226471654 -0.7069634970616326 -0.7070049990743651 -0.7068866674037738 -0.706968221057803\
                    -0.7069993033256949 -0.7068862515631232 -0.7069730845371476}
 
-test FindWhenTest-7 {} -body {
+test FindWhenTest-7 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 5}]
 } -result 29.059734040425376
 
-test FindWhenTest-8 {} -body {
+test FindWhenTest-8 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall all}]
 } -result {3.9269904048459794 10.210178126898237 16.493359669208044 22.776546417508598 29.059734040425376\
                    35.3429155371396 41.62610243078114 47.90928994793005}
 
-test FindWhenTest-9 {} -body {
+test FindWhenTest-9 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -cross all}]
 } -result {0.7853963717173225 3.9269904048459794 7.06858471936647 10.210178126898237 13.351769438547745\
                    16.493359669208044 19.634952339789507 22.776546417508598 25.91814071385083 29.059734040425376\
                    32.201325208292914 35.3429155371396 38.4845083117874 41.62610243078114 44.76769670562969\
                    47.90928994793005}
 
-test FindWhenTest-10 {} -body {
+test FindWhenTest-10 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 5 -from 1\
                                                                                           -to 30}]
 } -result 29.059734040425376
@@ -113,50 +192,50 @@ test FindWhenTest-11 {} -body {
     return $errorStr
 } -result {Cross between vectors with conditions 'fall 5 delay=0.000000 from=10.000000 to=20.000000' was not found}
 
-test FindWhenTest-12 {} -body {
+test FindWhenTest-12 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2]\
             -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}]
 } -result 29.059734040425376
 
-test FindWhenTest-13 {} -body {
+test FindWhenTest-13 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1\
                     -when {-vec y2 -val 0.5 -fall last}]
 } -result 0.8656753304879521
 
-test FindWhenTest-14 {} -body {
+test FindWhenTest-14 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last}]
 } -result 47.90928994793005
 
-test FindWhenTest-15 {} -body {
+test FindWhenTest-15 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall 2 -from 10\
                                                                                           -to 20}]
 } -result 16.493359669208044
 
-test FindWhenTest-16 {} -body {
+test FindWhenTest-16 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 1 -fall 1}]
 } -result 0.0
 
-test FindWhenTest-17 {} -body {
+test FindWhenTest-17 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -when {-vec1 y1 -vec2 y2 -fall 1\
                                                                                                    -from -5 -to 30}]
 } -result -2.356196191479806
 
-test FindWhenTest-18 {} -body {
+test FindWhenTest-18 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym]\
                     -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
 } -result -18.059860150158045
 
-test FindWhenTest-19 {} -body {
+test FindWhenTest-19 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y2\
                     -when {-vec1 y1 -vec2 y2 -fall 1 -from -5 -to 30}]
 } -result -0.7070108343424859
 
-test FindWhenTest-20 {} -body {
+test FindWhenTest-20 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y2\
                     -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
 } -result 0.7039206613685683
 
-test FindWhenTest-21 {} -body {
+test FindWhenTest-21 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $xsym y1 $y1sym y2 $y2sym] -find y1\
                     -when {-vec y1 -val 0.71 -rise 1 -from -20 -to 30}]
 } -result 0.7100000000000005
@@ -168,23 +247,23 @@ test FindWhenTest-22 {} -body {
 } -result {Cross between vectors with conditions 'fall 20 delay=0.000000 from=-5.000000 to=30.000000' was not found}
 
 ### DerivWhen tests
-test DerivWhenTest-1 {} -body {
+test DerivWhenTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec y2 -val 1 -cross 1}]
 } -result 1.0008326043588514
 
-test DerivWhenTest-2 {} -body {
+test DerivWhenTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec y2 -val 1 -cross last}]
 } -result 1.0008326043588514
 
-test DerivWhenTest-3 {} -body {
+test DerivWhenTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -when {-vec1 y1 -vec2 y2 -fall 5}]
 } -result -0.6961561896724078
 
-test DerivWhenTest-4 {} -body {
+test DerivWhenTest-4 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y2 -when {-vec y1 -val 0.1 -rise 2}]
 } -result -0.09167619818982331
 
-test DerivAtTest-5 {} -body {
+test DerivAtTest-5 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -when {-vec y1 -val 24.9999 -rise 1}]
@@ -192,7 +271,7 @@ test DerivAtTest-5 {} -body {
     unset xloc yloc
 }
 
-test DerivAtTest-6 {} -body {
+test DerivAtTest-6 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -when {-vec y1 -val 1 -rise 1}]
@@ -201,19 +280,19 @@ test DerivAtTest-6 {} -body {
 }
 
 ### FindAt tests
-test FindAtTest-1 {} -body {
+test FindAtTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5]
 } -result -0.9589242746631385
 
-test FindAtTest-2 {} -body {
+test FindAtTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at [@ $x end]]
 } -result -0.26237485370392877
 
-test FindAtTest-3 {} -body {
+test FindAtTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at [@ $x 0]]
 } -result 0.0
 
-test FindAtTest-4 {} -body {
+test FindAtTest-4 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5.81946]
 } -result -0.44715116692919593
 
@@ -223,23 +302,23 @@ test FindAtTest-5 {} -body {
 } -result {Value of the vector at '500.000000' was not found}
 
 ### DerivAt tests
-test DerivAtTest-1 {} -body {
+test DerivAtTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5]
 } -result 0.2835440076591418
 
-test DerivAtTest-2 {} -body {
+test DerivAtTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at [@ $x end]]
 } -result 0.9657612676151004
 
-test DerivAtTest-3 {} -body {
+test DerivAtTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at [@ $x 0]]
 } -result 1.0008326043588514
 
-test DerivAtTest-4 {} -body {
+test DerivAtTest-4 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5.81946]
 } -result 0.8967632314779559
 
-test DerivAtTest-5 {} -body {
+test DerivAtTest-5 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 0]
@@ -247,7 +326,7 @@ test DerivAtTest-5 {} -body {
     unset xloc yloc
 }
 
-test DerivAtTest-6 {} -body {
+test DerivAtTest-6 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 1]
@@ -255,7 +334,7 @@ test DerivAtTest-6 {} -body {
     unset xloc yloc
 }
 
-test DerivAtTest-7 {} -body {
+test DerivAtTest-7 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 5]
@@ -263,7 +342,7 @@ test DerivAtTest-7 {} -body {
     unset xloc yloc
 }
 
-test DerivAtTest-8 {} -body {
+test DerivAtTest-8 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y1 $yloc] -deriv y1 -at 4]
@@ -301,11 +380,11 @@ test CheckTest-4 {} -body {
 }
 
 ### Integ tests
-test IntegTest-1 {} -body {
+test IntegTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -integ {-vec y1 -from 4 -to 25}]
 } -result -1.6445037421079023
 
-test IntegTest-2 {} -body {
+test IntegTest-2 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.5 -to 4.5}]
@@ -313,7 +392,7 @@ test IntegTest-2 {} -body {
     unset xloc yloc
 }
 
-test IntegTest-3 {} -body {
+test IntegTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 4}]
@@ -342,7 +421,7 @@ test IntegTest-6 {} -body {
     unset errorStr
 }
 
-test IntegTest-7 {} -body {
+test IntegTest-7 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
      return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 5}]
@@ -350,7 +429,7 @@ test IntegTest-7 {} -body {
     unset xloc yloc
 }
 
-test IntegTest-8 {} -body {
+test IntegTest-8 {} -match matchDict -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
      return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -integ {-vec y -from 0.0 -to 5 -cum}]
@@ -359,15 +438,15 @@ test IntegTest-8 {} -body {
 }
 
 ### Min tests
-test MinTest-1 {} -body {
+test MinTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -min {-vec y1 -from 4 -to 25}]
 } -result -0.9999902065507035
 
-test MinTest-2 {} -body {
+test MinTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -min {-vec y1}]
 } -result -0.9999902065507035
 
-test MinTest-3 {} -body {
+test MinTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -min {-vec y -from 0.0 -to 5}]
@@ -376,15 +455,15 @@ test MinTest-3 {} -body {
 }
 
 ### Max tests
-test MaxTest-1 {} -body {
+test MaxTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -max {-vec y1 -from 4 -to 25}]
 } -result 0.9999920733059188
 
-test MaxTest-2 {} -body {
+test MaxTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -max {-vec y1}]
 } -result 0.9999952152036801
 
-test MaxTest-3 {} -body {
+test MaxTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -max {-vec y -from 0.0 -to 5}]
@@ -393,15 +472,15 @@ test MaxTest-3 {} -body {
 }
 
 ### Pp tests
-test PpTest-1 {} -body {
+test PpTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -pp {-vec y1 -from 4 -to 25}]
 } -result 1.9999822798566222
 
-test PpTest-2 {} -body {
+test PpTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -pp {-vec y1}]
 } -result 1.9999854217543835
 
-test PpTest-3 {} -body {
+test PpTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -pp {-vec y -from 0.0 -to 5}]
@@ -410,15 +489,15 @@ test PpTest-3 {} -body {
 }
 
 ### Minat tests
-test MinatTest-1 {} -body {
+test MinatTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -minat {-vec y1 -from 4 -to 25}]
 } -result 11.0
 
-test MinatTest-2 {} -body {
+test MinatTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -minat {-vec y1}]
 } -result 11.0
 
-test MinatTest-3 {} -body {
+test MinatTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -minat {-vec y -from 0.0 -to 5}]
@@ -426,7 +505,7 @@ test MinatTest-3 {} -body {
     unset xloc yloc
 }
 
-test MinatTest-4 {} -body {
+test MinatTest-4 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -minat {-vec y -from 0.5 -to 5}]
@@ -435,15 +514,15 @@ test MinatTest-4 {} -body {
 }
 
 ### Maxat tests
-test MaxatTest-1 {} -body {
+test MaxatTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -maxat {-vec y1 -from 4 -to 25}]
 } -result 7.8500000000000005
 
-test MaxatTest-2 {} -body {
+test MaxatTest-2 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -maxat {-vec y1}]
 } -result 45.550000000000004
 
-test MaxatTest-3 {} -body {
+test MaxatTest-3 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -maxat {-vec y -from 0.0 -to 5}]
@@ -451,7 +530,7 @@ test MaxatTest-3 {} -body {
     unset xloc yloc
 }
 
-test MaxatTest-4 {} -body {
+test MaxatTest-4 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -maxat {-vec y -from 0.5 -to 4.5}]
@@ -460,11 +539,11 @@ test MaxatTest-4 {} -body {
 }
 
 ### Between tests
-test BetweenTest-1 {} -body {
+test BetweenTest-1 {} -match matchDict -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -between {-vec y1 -from 4 -to 4.1}]
 } -result {x {4.0 4.0 4.05 4.1} y {-0.7568024953079282 -0.7568024953079282 -0.788525254426195 -0.8182771110644103}}
 
-test BetweenTest-2 {} -body {
+test BetweenTest-2 {} -match matchDict -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -between {-vec y -from 0.0 -to 4.5}]
@@ -472,7 +551,7 @@ test BetweenTest-2 {} -body {
     unset xloc yloc
 }
 
-test BetweenTest-3 {} -body {
+test BetweenTest-3 {} -match matchDict -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -between {-vec y -from 0.5 -to 3.5}]
@@ -481,11 +560,11 @@ test BetweenTest-3 {} -body {
 }
 
 ### Avg tests
-test AvgTest-1 {} -body {
+test AvgTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -avg {-vec y1 -from 4 -to 25}]
 } -result -0.0783097020051382
 
-test AvgTest-2 {} -body {
+test AvgTest-2 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -avg {-vec y -from 0.0 -to 5}]
@@ -493,16 +572,16 @@ test AvgTest-2 {} -body {
     unset xloc yloc
 }
 
-test AvgTest-3 {} -body {
+test AvgTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -avg "-vec y1 -from 0.0 -to [= {14*$pi}]"]
 } -result -9.290611878927444e-10
 
 ### Rms tests
-test RmsTest-1 {} -body {
+test RmsTest-1 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -rms {-vec y1 -from 4 -to 25}]
 } -result 0.7175577777924522
 
-test RmsTest-2 {} -body {
+test RmsTest-2 {} -match matchList -body {
     set xloc {0 1 2 3 4 5}
     set yloc {0 1 4 9 16 25}
     return [::tclmeasure::measure -xname x -data [dcreate x $xloc y $yloc] -rms {-vec y -from 0.0 -to 5}]
@@ -510,7 +589,7 @@ test RmsTest-2 {} -body {
     unset xloc yloc
 }
 
-test RmsTest-3 {} -body {
+test RmsTest-3 {} -match matchList -body {
     return [::tclmeasure::measure -xname x -data [dcreate x $x y1 $y1] -rms "-vec y1 -from 0.0 -to [= {14*$pi}]"]
 } -result 0.7071068035643117
 
