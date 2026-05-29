@@ -7,3 +7,7 @@ config.log
 pkgIndex.tcl
 configure~
 *.pdf
+/docs/_sources
+/docs/sphinx
+/docs/.doctrees
+/docs/*.bak

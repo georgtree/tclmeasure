@@ -149,7 +149,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -158,7 +158,7 @@ vector point is when y2 crosses value 0\&.5, fifth fall\&.
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.7 -rise 2} -targ {-at 20\&.0}
 .fi
 .RE
 .PP
@@ -235,7 +235,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -find y1 -when {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP
@@ -243,7 +243,7 @@ Here we use x key value as x axis, find vector is y1, and point is when vector y
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -find y1 -when {-vec1 y1 -vec2 y2 -fall 5}
 .fi
 .RE
 .PP
@@ -252,7 +252,7 @@ vector\&.
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -when {-vec1 y1 -vec2 y2 -fall last -from 1 -to 30}
 .fi
 .RE
 .PP
@@ -268,7 +268,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -find y1 -at 5
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -find y1 -at 5
 .fi
 .RE
 .PP
@@ -279,7 +279,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -deriv y1 -at 5
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -deriv y1 -at 5
 .fi
 .RE
 .PP
@@ -302,7 +302,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 .PP
@@ -330,7 +330,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dcreate x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
 
