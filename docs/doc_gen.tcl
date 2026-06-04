@@ -20,7 +20,7 @@ set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -
                          -version $packageVersion -copyright "George Yashin" {*}$::argv]
 set namespaces [list ::tclmeasure]
 
-ruff::document $namespaces -format sphinx -outdir [file join $docDir sphinx] {*}$commonSphinx
+ruff::document $namespaces -format sphinx -outfile tclmeasure.rst -outdir [file join $docDir sphinx] {*}$commonSphinx
 ruff::document $namespaces -format nroff -outdir $docDir -outfile tclmeasure.n {*}$commonNroff
 
 ::fileutil::appendToFile [file join $docDir sphinx conf.py] {html_theme = "classic"
