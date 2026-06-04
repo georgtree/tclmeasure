@@ -369,7 +369,8 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     int lastTrigHitSet = 0;
     double lastTargHit[4] = {0.0, 0.0, 0.0, 0.0};
     int lastTargHitSet = 0;
-    double xTrig, xTarg;
+    double xTrig = 0.0;
+    double xTarg = 0.0;
     if (objc != 12) {
         Tcl_WrongNumArgs(interp, 11, objv,
                          "x trigVec val1 targVec val2 trigVecCond trigVecCondCount targVecCond targVecCondCount "
@@ -429,12 +430,12 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     }
     if (xLen != trigVecLen) {
         Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%ld' is not equal to length of trigVec '%ld'", xLen, trigVecLen);
+            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of trigVec '%lld'", xLen, trigVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     } else if (trigVecLen != targVecLen) {
         Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of trigVec '%ld' is not equal to length of targVec '%ld'", trigVecLen, targVecLen);
+            Tcl_ObjPrintf("Length of trigVec '%lld' is not equal to length of targVec '%lld'", trigVecLen, targVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -720,7 +721,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         (mode == FDW_SWITCH_FINDWHENEQ)) {
         if (xLen != whenVecLSLen) {
             Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%ld' is not equal to length of whenVecLS '%ld'", xLen, whenVecLSLen);
+                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of whenVecLS '%lld'", xLen, whenVecLSLen);
             Tcl_SetObjResult(interp, errorMsg);
             return TCL_ERROR;
         }
@@ -728,7 +729,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     if ((mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHENEQ) || (mode == FDW_SWITCH_DERIVWHENEQ)) {
         if (xLen != whenVecRSLen) {
             Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%ld' is not equal to length of whenVecRS '%ld'", xLen, whenVecRSLen);
+                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of whenVecRS '%lld'", xLen, whenVecRSLen);
             Tcl_SetObjResult(interp, errorMsg);
             return TCL_ERROR;
         }
@@ -736,7 +737,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     if ((mode == FDW_SWITCH_FINDWHEN) || (mode == FDW_SWITCH_DERIVWHEN)) {
         if (xLen != findVecLen) {
             Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%ld' is not equal to length of findVec '%ld'", xLen, findVecLen);
+                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of findVec '%lld'", xLen, findVecLen);
             Tcl_SetObjResult(interp, errorMsg);
             return TCL_ERROR;
         }
@@ -1147,7 +1148,7 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
     }
     if (xLen != findVecLen) {
         Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%ld' is not equal to length of findVec '%ld'", xLen, findVecLen);
+            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of findVec '%lld'", xLen, findVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -1230,7 +1231,7 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
     }
     if (xLen != derivVecLen) {
         Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%ld' is not equal to length of derivVec '%ld'", xLen, derivVecLen);
+            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of derivVec '%lld'", xLen, derivVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -1336,7 +1337,7 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
         yCum = Tcl_NewListObj(0, NULL);
     }
     if (xLen != yLen) {
-        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of y '%ld'", xLen, yLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%lld' is not equal to length of y '%lld'", xLen, yLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -1789,7 +1790,7 @@ static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_
         return TCL_ERROR;
     }
     if (xLen != yLen) {
-        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%ld' is not equal to length of y '%ld'", xLen, yLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%lld' is not equal to length of y '%lld'", xLen, yLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
