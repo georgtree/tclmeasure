@@ -5,7 +5,7 @@
 # Installation and dependencies
 
 For building you need:
-- [Tcl9](https://www.tcl.tk/software/tcltk/9.0.html) or [Tcl8.6.15](https://www.tcl.tk/software/tcltk/8.6.html)
+- [Tcl9](https://www.tcl.tk/software/tcltk/9.0.html)
 - [gcc compiler](https://gcc.gnu.org/)
 - [make tool](https://www.gnu.org/software/make/)
 
@@ -29,7 +29,7 @@ There are prebuilt packages that contains .so/.dll files, tcl code and tests for
 
 # Supported platforms
 
-Any OS that has tcl8.6/tcl9.0 (Linux, Windows, FreeBSD).
+Any OS that has tcl9.0 (Linux, Windows, FreeBSD).
 
 # Documentation
 

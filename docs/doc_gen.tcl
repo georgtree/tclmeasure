@@ -1,6 +1,4 @@
-
 package require ruff
-#source /home/georgtree/tcl/ruff/src/ruff.tcl
 package require fileutil
 
 set docDir [file dirname [file normalize [info script]]]
@@ -15,7 +13,7 @@ set commonSphinx [list -title $title -sortnamespaces false -preamble $startPage 
                         -excludeprocs {^[A-Z].*} -includeprivate false -product tclmeasure -diagrammer\
                         "ditaa --border-width 1" -version $packageVersion -copyright "George Yashin" {*}$::argv]
 set commonNroff [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
-                         -pagesplit namespace -autopunctuate true -compact true -includeprivate false \
+                         -pagesplit none -autopunctuate true -compact true -includeprivate false \
                          -excludeprocs {^[A-Z].*} -product tclmeasure -diagrammer "ditaa --border-width 1"\
                          -version $packageVersion -copyright "George Yashin" {*}$::argv]
 set namespaces [list ::tclmeasure]
