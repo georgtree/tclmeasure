@@ -1,5 +1,5 @@
 package require argparse 0.60-
-package provide tclmeasure 0.5
+package provide tclmeasure 0.9
 
 namespace eval ::tclmeasure {
     namespace import ::tcl::mathop::*
@@ -16,25 +16,54 @@ proc ::tclmeasure::AliasesKeysCheck {arguments keys} {
     return -code error "[join [lrange $formKeys 0 end-1] ", "] or [lindex $formKeys end] must be presented"
 }
 
-proc ::tclmeasure::FromTo {argsDict data xname} {
+proc ::tclmeasure::InputData {data name vectors} {
+    # Lists come from the data dictionary. Vector names are resolved in measure's caller, without reading samples.
+    if {!$vectors} {
+        return [dict get $data $name]
+    }
+    set command [uplevel 2 [list namespace which -command $name]]
+    if {$command eq {}} {
+        return -code error "vector command \"$name\" does not exist"
+    }
+    return $command
+}
+
+proc ::tclmeasure::FromTo {argsDict xData vectors} {
+    # Only the endpoints are read for defaults; full vector storage is consumed directly by the C command.
     if {![dict exists $argsDict from]} {
-        set from [lindex [dict get $data $xname] 0]
+        if {$vectors} {
+            set from [$xData index [$xData offset]]
+        } else {
+            set from [lindex $xData 0]
+        }
     } else {
         set from [dict get $argsDict from]
     }
     if {![dict exists $argsDict to]} {
-        set to [lindex [dict get $data $xname] end]
+        if {$vectors} {
+            set to [$xData index end]
+        } else {
+            set to [lindex $xData end]
+        }
     } else {
         set to [dict get $argsDict to]
     }
     uplevel 1 [list set from $from]
-    uplevel 1 [list set to $to] 
+    uplevel 1 [list set to $to]
 }
 
 proc ::tclmeasure::measure {args} {
-    # Does different measurements of input data lists.
-    #  -xname - name of x list in data dictionary. This list must be strictly increaing without duplicate elements.
-    #  -data - dictionary that contains lists with names as the keys and lists as the values.
+    # Does different measurements of input data lists or real RBC vectors.
+    # With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
+    # in the caller's namespace; direct vector support must be enabled at build time with --with-rbc.
+    # Vector names are passed directly to C without converting the samples to lists. All modes preserve their
+    # existing scalar/list/dictionary results and never create result vectors. Mapped array variables are optional.
+    # Complex vectors are rejected. X must be strictly increasing and all inputs must have equal sample counts.
+    # Vector index offsets do not change sample alignment. Derivatives need at least three samples; other modes
+    # need at least two. See the installation page for optional RBC build and runtime dependencies.
+    #  -xname - name of x list in data dictionary, or RBC vector command when -data is omitted. This list must be
+    #   strictly increaing without duplicate elements.
+    #  -data - optional dictionary of named lists; omitting it selects direct RBC vector input.
     #  -trig - contains conditions for trigger (see below), selects Trigger-Target measurement, requires -targ
     #  -targ - contains conditions for target (see below), requires -trig
     #  -find - contains conditions for find (see below), requires -when or -at
@@ -58,7 +87,7 @@ proc ::tclmeasure::measure {args} {
     #  certain x axis value, and finally calculates difference between trigger and target point along x axis.
     #  The conditions for trigger and target could be in two forms: hit of certain value by specified vector, or 
     #  certain exact point on x axis. These conditions are provided as a list of arguments to -trig and -targ switches:
-    #   -vec - name of vector in data dictionary
+    #   -vec - key in data dictionary, or RBC vector command when -data is omitted
     #   -val - value to match
     #   -td - x axis delay after which the search is start, default is 0.0.
     #   -cross - condition's count, cross conditions counts every time vector crosses value, and saves
@@ -101,7 +130,7 @@ proc ::tclmeasure::measure {args} {
     # a given value. Measurements start after a delay `-td` and may be restricted to a range between `-from` and `-to`.
     # Possible combinations of switches are `-when {...}` or `-find {...} -when {...}`. For `-when` the possible 
     # switches are:
-    #  -vec - name of vector in data dictionary
+    #  -vec - key in data dictionary, or RBC vector command when -data is omitted
     #  -val - value to match
     #  -td - x axis delay after which the search is start, default is 0.0.
     #  -from - start of the range in which search happens, default is minimum value of x.
@@ -117,8 +146,8 @@ proc ::tclmeasure::measure {args} {
     #
     # or
     #
-    #  -vec1 - name of first vector in data dictionary
-    #  -vec2 - name of second vector in data dictionary
+    #  -vec1 - first key in data dictionary, or RBC vector command when -data is omitted
+    #  -vec2 - second key in data dictionary, or RBC vector command when -data is omitted
     #  -td - x axis delay after which the search is start, default is 0.0.
     #  -from - start of the range in which search happens, default is minimum value of x.
     #  -to - end of the range in which search happens, default is maximum value of x.
@@ -179,7 +208,7 @@ proc ::tclmeasure::measure {args} {
     #
     # ###### **Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between**
     # This mode is combination of many modes with the same interface.
-    #  -vec - name of vector in data dictionary
+    #  -vec - key in data dictionary, or RBC vector command when -data is omitted
     #  -from - start of the range in which search happens, default is minimum value of x.
     #  -to - end of the range in which search happens, default is maximum value of x.
     # Examples of usages:
@@ -192,7 +221,7 @@ proc ::tclmeasure::measure {args} {
     #
     # ###### **Integ**
     # This mode is combination of many modes with the same interface.
-    #  -vec - name of vector in data dictionary
+    #  -vec - key in data dictionary, or RBC vector command when -data is omitted
     #  -from - start of the integration range, default is minimum value of x.
     #  -to - end of the integration range, default is maximum value of x.
     #  -cum - optional flag to return cumulative integration result list instead of thhe final value
@@ -209,7 +238,7 @@ proc ::tclmeasure::measure {args} {
                             Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between and Integ. See documentation for further details} {
         {-xname= -required -help {Name of x list in data dictionary. This list must be strictly increaing without\
                                           duplicate elements}}
-        {-data= -required -help {Dictionary that contains lists with names as the keys and lists as the values}}
+        {-data= -help {Dictionary of named lists; omit to use RBC vector command names}}
         {-trig= -require targ -allow {data xname targ} -help {Conditions for trigger, selects Trigger-Target\
                                                                       measurement}}
         {-targ= -require trig -allow {data xname trig}  -help {Conditions for target}}
@@ -227,6 +256,15 @@ proc ::tclmeasure::measure {args} {
         {-maxat= -allow {data xname} -help {Conditions for finding time of maximum value in the interval}}
         {-between= -allow {data xname} -help {Conditions for fetching data in the interval}}
     }
+    set vectors [expr {![info exists data]}]
+    set suffix {}
+    if {$vectors} {
+        # Fail clearly in a list-only build before attempting vector command calls.
+        VectorSupport
+        set data {}
+        set suffix Vectors
+    }
+    set xData [InputData $data $xname $vectors]
     if {[info exists at]} {
         if {![info exists find] && ![info exists deriv]} {
             return -code error "When -at switch is presented, -find switch or -deriv switch is required"
@@ -254,40 +292,40 @@ proc ::tclmeasure::measure {args} {
         if {![dict exists $trigArgs at]} {
             set trigVecCond [AliasesKeysCheck $trigArgs {cross rise fall}]
             set trigVecCondCount [dict get $trigArgs $trigVecCond]
-            if {[string is integer $trigVecCondCount]} {
+            if {[string is integer -strict $trigVecCondCount]} {
                 if {$trigVecCondCount<=0} {
                     return -code error "Trig count '$trigVecCondCount' must be more than 0"
                 }
             } elseif {$trigVecCondCount ne {last}} {
                 return -code error "Trig count '$trigVecCondCount' must be an integer or 'last' string"
             }
-            set trigData [dict get $data [dict get $trigArgs vec]]
+            set trigData [InputData $data [dict get $trigArgs vec] $vectors]
             set trigVal [dict get $trigArgs val]
         } else {
             set trigVecCond rise
             set trigVecCondCount 1
-            set trigData [dict get $data $xname]
+            set trigData $xData
             set trigVal [dict get $trigArgs at]
         }
         if {![dict exists $targArgs at]} {
             set targVecCond [AliasesKeysCheck $targArgs {cross rise fall}]
             set targVecCondCount [dict get $targArgs $targVecCond]
-            if {[string is integer $targVecCondCount]} {
+            if {[string is integer -strict $targVecCondCount]} {
                 if {$targVecCondCount<=0} {
                     return -code error "Targ count '$targVecCondCount' must be more than 0"
                 }
             } elseif {$targVecCondCount ne {last}} {
                 return -code error "Targ count '$targVecCondCount' must be an integer or 'last' string"
             }
-            set targData [dict get $data [dict get $targArgs vec]]
+            set targData [InputData $data [dict get $targArgs vec] $vectors]
             set targVal [dict get $targArgs val]
         } else {
             set targVecCond rise
             set targVecCondCount 1
-            set targData [dict get $data $xname]
+            set targData $xData
             set targVal [dict get $targArgs at]
         }
-        return [::tclmeasure::TrigTarg [dict get $data $xname] $trigData $trigVal $targData $targVal $trigVecCond\
+        return [::tclmeasure::TrigTarg${suffix} $xData $trigData $trigVal $targData $targVal $trigVecCond\
                         $trigVecCondCount $targVecCond $targVecCondCount [dict get $trigArgs delay]\
                         [dict get $targArgs delay]]
     } elseif {[info exists find] && [info exists when]} {
@@ -305,7 +343,7 @@ proc ::tclmeasure::measure {args} {
         } $when]
         AliasesKeysCheck $whenArgs {vec vec1}
         set whenVecCond [AliasesKeysCheck $whenArgs {cross rise fall}]
-        if {[string is integer [dict get $whenArgs $whenVecCond]]} {
+        if {[string is integer -strict [dict get $whenArgs $whenVecCond]]} {
             if {[dict get $whenArgs $whenVecCond]<=0} {
                 return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be more than 0"
             }
@@ -313,17 +351,19 @@ proc ::tclmeasure::measure {args} {
             return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be an integer, 'last' or 'all'\
                     string"
         }
-        FromTo $whenArgs $data $xname
+        FromTo $whenArgs $xData $vectors
         if {[dict exists $whenArgs vec1]} {
             if {[dict get $whenArgs vec1] eq [dict get $whenArgs vec2]} {
                 return -code error "vec1 must be different to vec2"
             }
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] findwheneq [dict get $data $find]\
-                            [dict get $data [dict get $whenArgs vec1]] {} [dict get $data [dict get $whenArgs vec2]]\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData findwheneq [InputData $data $find $vectors]\
+                            [InputData $data [dict get $whenArgs vec1] $vectors] {}\
+                            [InputData $data [dict get $whenArgs vec2] $vectors]\
                             $whenVecCond [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] findwhen [dict get $data $find]\
-                            [dict get $data [dict get $whenArgs vec]] [dict get $whenArgs val] {} $whenVecCond\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData findwhen [InputData $data $find $vectors]\
+                            [InputData $data [dict get $whenArgs vec] $vectors]\
+                            [dict get $whenArgs val] {} $whenVecCond\
                             [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         }
     } elseif {[info exists deriv] && [info exists when]} {
@@ -341,7 +381,7 @@ proc ::tclmeasure::measure {args} {
         } $when]
         AliasesKeysCheck $whenArgs {vec vec1}
         set whenVecCond [AliasesKeysCheck $whenArgs {cross rise fall}]
-        if {[string is integer [dict get $whenArgs $whenVecCond]]} {
+        if {[string is integer -strict [dict get $whenArgs $whenVecCond]]} {
             if {[dict get $whenArgs $whenVecCond]<=0} {
                 return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be more than 0"
             }
@@ -349,17 +389,19 @@ proc ::tclmeasure::measure {args} {
             return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be an integer, 'last' or 'all'\
                     string"
         }
-        FromTo $whenArgs $data $xname
+        FromTo $whenArgs $xData $vectors
         if {[dict exists $whenArgs vec1]} {
             if {[dict get $whenArgs vec1] eq [dict get $whenArgs vec2]} {
                 return -code error "vec1 must be different to vec2"
             }
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] derivwheneq [dict get $data $deriv]\
-                            [dict get $data [dict get $whenArgs vec1]] {} [dict get $data [dict get $whenArgs vec2]]\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData derivwheneq [InputData $data $deriv $vectors]\
+                            [InputData $data [dict get $whenArgs vec1] $vectors] {}\
+                            [InputData $data [dict get $whenArgs vec2] $vectors]\
                             $whenVecCond [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] derivwhen [dict get $data $deriv]\
-                            [dict get $data [dict get $whenArgs vec]] [dict get $whenArgs val] {} $whenVecCond\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData derivwhen [InputData $data $deriv $vectors]\
+                            [InputData $data [dict get $whenArgs vec] $vectors]\
+                            [dict get $whenArgs val] {} $whenVecCond\
                             [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         }
     } elseif {[info exists when]} {
@@ -377,7 +419,7 @@ proc ::tclmeasure::measure {args} {
         } $when]
         AliasesKeysCheck $whenArgs {vec vec1}
         set whenVecCond [AliasesKeysCheck $whenArgs {cross rise fall}]
-        if {[string is integer [dict get $whenArgs $whenVecCond]]} {
+        if {[string is integer -strict [dict get $whenArgs $whenVecCond]]} {
             if {[dict get $whenArgs $whenVecCond]<=0} {
                 return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be more than 0"
             }
@@ -385,20 +427,21 @@ proc ::tclmeasure::measure {args} {
             return -code error "Trig count '[dict get $whenArgs $whenVecCond]' must be an integer, 'last' or 'all'\
                     string"
         }
-        FromTo $whenArgs $data $xname
+        FromTo $whenArgs $xData $vectors
         if {[dict exists $whenArgs vec1]} {
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] wheneq {}\
-                            [dict get $data [dict get $whenArgs vec1]] {} [dict get $data [dict get $whenArgs vec2]]\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData wheneq {}\
+                            [InputData $data [dict get $whenArgs vec1] $vectors] {}\
+                            [InputData $data [dict get $whenArgs vec2] $vectors]\
                             $whenVecCond [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         } else {
-            return [::tclmeasure::FindDerivWhen [dict get $data $xname] when {}\
-                            [dict get $data [dict get $whenArgs vec]] [dict get $whenArgs val] {}\
+            return [::tclmeasure::FindDerivWhen${suffix} $xData when {}\
+                            [InputData $data [dict get $whenArgs vec] $vectors] [dict get $whenArgs val] {}\
                             $whenVecCond [dict get $whenArgs $whenVecCond] [dict get $whenArgs delay] $from $to]
         }
     } elseif {[info exists find] && [info exists at]} {
-        return [::tclmeasure::FindAt [dict get $data $xname] $at [dict get $data $find]]
+        return [::tclmeasure::FindAt${suffix} $xData $at [InputData $data $find $vectors]]
     } elseif {[info exists deriv] && [info exists at]} {
-        return [::tclmeasure::DerivAt [dict get $data $xname] $at [dict get $data $deriv]]
+        return [::tclmeasure::DerivAt${suffix} $xData $at [InputData $data $deriv $vectors]]
     } elseif {[info exists integ]} {
         set integArgs [argparse -inline {
             {-vec= -required}
@@ -406,8 +449,8 @@ proc ::tclmeasure::measure {args} {
             {-to= -type double}
             {-cum -boolean}
         } $integ]
-        FromTo $integArgs $data $xname
-        return [::tclmeasure::Integ [dict get $data $xname] [dict get $data [dict get $integArgs vec]] $from $to\
+        FromTo $integArgs $xData $vectors
+        return [::tclmeasure::Integ${suffix} $xData [InputData $data [dict get $integArgs vec] $vectors] $from $to\
                         [dict get $integArgs cum]]
     } elseif {[info exists avg]} {
         set avgArgs [argparse -inline {
@@ -415,16 +458,19 @@ proc ::tclmeasure::measure {args} {
             {-from= -type double}
             {-to= -type double}
         } $avg]
-        FromTo $avgArgs $data $xname
-        return [::tclmeasure::Avg [dict get $data $xname] [dict get $data [dict get $avgArgs vec]] $from $to]
+        FromTo $avgArgs $xData $vectors
+        return [::tclmeasure::Avg${suffix} $xData [InputData $data [dict get $avgArgs vec] $vectors] $from $to]
     } elseif {[info exists rms]} {
         set rmsArgs [argparse -inline {
             {-vec= -required}
             {-from= -type double}
             {-to= -type double}
         } $rms]
-        FromTo $rmsArgs $data $xname
-        return [::tclmeasure::Rms [dict get $data $xname] [dict get $data [dict get $rmsArgs vec]] $from $to]
+        FromTo $rmsArgs $xData $vectors
+        if {$vectors} {
+            return [::tclmeasure::RmsVectors $xData [InputData $data [dict get $rmsArgs vec] $vectors] $from $to false]
+        }
+        return [::tclmeasure::Rms $xData [InputData $data [dict get $rmsArgs vec] $vectors] $from $to]
     } elseif {[info exists min] || [info exists max] || [info exists pp] || [info exists minat] || [info exists maxat]\
                       || [info exists between]} {
         if {[info exists min]} {
@@ -451,8 +497,8 @@ proc ::tclmeasure::measure {args} {
             {-from= -validate {[string is double $arg]}}
             {-to= -validate {[string is double $arg]}}
         } $argsDict]
-        FromTo $resDict $data $xname
-        return [::tclmeasure::MinMaxPPMinAtMaxAt [dict get $data $xname] [dict get $data [dict get $resDict vec]]\
+        FromTo $resDict $xData $vectors
+        return [::tclmeasure::MinMaxPPMinAtMaxAt${suffix} $xData [InputData $data [dict get $resDict vec] $vectors]\
                         $from $to $type]
     }
 }
@@ -466,4 +512,9 @@ proc ::tclmeasure::Rms {x y xstart xend} {
     set ySq [lmap yVal $y {expr {$yVal*$yVal}}]
     set integral [Integ $x $ySq $xstart $xend false]
     return [expr {sqrt($integral/($xend-$xstart))}]
+}
+
+proc ::tclmeasure::AvgVectors {x y xstart xend} {
+    set integral [IntegVectors $x $y $xstart $xend false]
+    return [expr {$integral/($xend-$xstart)}]
 }

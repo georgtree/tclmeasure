@@ -70,6 +70,50 @@ flag to configure script.</p>
 <p>For Windows build it is strongly recommended to use <a class="reference external" href="https://www.msys2.org/">MSYS64 UCRT64 environment</a>, the above
 steps are identical if you run it from UCRT64 shell.</p>
 <p>There are prebuilt packages that contains .so/.dll files, tcl code and tests for Windows and Linux.</p>
+<section id="optional-direct-rbc-vector-input">
+<span id="r-optional-direct-rbc-vector-input"></span><span id="r-optional20direct20rbc20vector20input"></span><h2>Optional direct RBC vector input<a class="headerlink" href="#optional-direct-rbc-vector-input" title="Link to this heading">¶</a></h2>
+<p>The default build supports Tcl lists and does not need RBC headers or libraries. To enable direct real-vector
+input from <a class="reference external" href="https://github.com/georgtree/rbc-tk9">rbc-tk9</a>, build with Tcl 9 and the current RBC 0.5.0 API:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./configure<span class="w"> </span>--with-tcl<span class="o">=</span>/path/to/tcl/lib<span class="w"> </span>--with-rbc<span class="o">=</span>/path/to/rbc-tk9
+make
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">--with-rbc</span></code> accepts an RBC source tree, an installation prefix, or a directory containing <code class="docutils literal notranslate"><span class="pre">rbcVector.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">rbcDecls.h</span></code> and <code class="docutils literal notranslate"><span class="pre">rbcStubLib.c</span></code>. The supplied stub client source is compiled into tclmeasure; the RBC shared
+library is not linked into tclmeasure. Use matching RBC headers and runtime. <code class="docutils literal notranslate"><span class="pre">--without-rbc</span></code> explicitly selects
+the default list-only build. Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code> when changing this option in an existing build directory.</p>
+<p>Even an RBC-enabled build can load and process lists without RBC installed. The <code class="docutils literal notranslate"><span class="pre">rbc::vector</span></code> package is loaded
+only when vector input is requested. Tk initialization is not required for vector measurements; the installed
+RBC binary must still have its own system library dependencies available.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">-data</span></code>, measurement inputs are lists looked up in that dictionary, as before. Omit <code class="docutils literal notranslate"><span class="pre">-data</span></code> to interpret
+<code class="docutils literal notranslate"><span class="pre">-xname</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec1</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec2</span></code>, <code class="docutils literal notranslate"><span class="pre">-find</span></code> and <code class="docutils literal notranslate"><span class="pre">-deriv</span></code> as RBC vector command names:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>tclmeasure
+<span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>rbc::vector
+<span class="nv">rbc</span><span class="o">::</span>vector<span class="w"> </span>create<span class="w"> </span>time<span class="w"> </span>signal
+<span class="nb">time</span><span class="w"> </span>set<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="k">}</span>
+<span class="nv">signal</span><span class="w"> </span>set<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">6</span><span class="k">}</span>
+<span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>measure<span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-at</span><span class="w"> </span><span class="mf">0.5</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>signal<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+<span class="c"># -&gt; xtrig 0.5 xtarg 1.5 xdelta 1.0</span>
+</pre></div>
+</div>
+<p>All measurement modes accept vectors. Names are resolved in the namespace of the caller of <code class="docutils literal notranslate"><span class="pre">measure</span></code>, with
+normal Tcl command lookup; fully qualified names also work. Use the vector’s actual command name, not a Tcl
+alias or an imported command with a different name. Mapped array variables are not needed. Only real vectors
+are supported, with equal sample counts and strictly increasing X values. External vector index offsets do
+not affect sample alignment. Supply at least two samples, or three for derivative measurements.</p>
+<p>The wrapper passes names directly to C; it does not extract the full vectors as lists. A shared read-only
+accessor serves both input types. RMS squares samples while reading, before interpolation, matching the list
+implementation without creating a temporary vector. Inputs are not modified. Returned values retain the
+existing scalar, list and dictionary forms, including <code class="docutils literal notranslate"><span class="pre">-between</span></code>, <code class="docutils literal notranslate"><span class="pre">-integ</span> <span class="pre">-cum</span></code> and <code class="docutils literal notranslate"><span class="pre">-cross</span> <span class="pre">all</span></code>; no result
+vectors are created. Existing interpolation and measurement semantics are unchanged.</p>
+<p>The internal C commands retain their original list signatures. Their <code class="docutils literal notranslate"><span class="pre">Vectors</span></code> counterparts use the same
+arguments with vector names in the data positions; unused <code class="docutils literal notranslate"><span class="pre">FindDerivWhenVectors</span></code> inputs remain empty strings.
+<code class="docutils literal notranslate"><span class="pre">RmsVectors</span></code> uses the <code class="docutils literal notranslate"><span class="pre">IntegVectors</span></code> signature with the final cumulative flag set to false. These commands
+initialize stubs in the current interpreter before borrowing sample storage and do not evaluate Tcl or process
+events while reading it.</p>
+<p>The test suite retains the list cases and repeats them with vector names and the same expected results when
+<code class="docutils literal notranslate"><span class="pre">rbc::vector</span></code> and direct vector support are available. Run it against both build configurations.</p>
+</section>
 </section>
 <section id="supported-platforms">
 <span id="r-supported-platforms"></span><span id="r-supported20platforms"></span><h1>Supported platforms<a class="headerlink" href="#supported-platforms" title="Link to this heading">¶</a></h1>
@@ -94,7 +138,10 @@ Also on Linux you can open manpages installed after run of <code class="docutils
     <h3><a href="index.html">Table of Contents</a></h3>
     <ul>
 <li><a class="reference internal" href="#">Content</a></li>
-<li><a class="reference internal" href="#installation-and-dependencies">Installation and dependencies</a></li>
+<li><a class="reference internal" href="#installation-and-dependencies">Installation and dependencies</a><ul>
+<li><a class="reference internal" href="#optional-direct-rbc-vector-input">Optional direct RBC vector input</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#supported-platforms">Supported platforms</a></li>
 <li><a class="reference internal" href="#documentation">Documentation</a></li>
 </ul>

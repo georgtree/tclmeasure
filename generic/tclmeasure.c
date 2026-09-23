@@ -53,6 +53,7 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     if (Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, NULL) != TCL_OK) {
         return TCL_ERROR;
     }
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::VectorSupport", MeasureVectorSupportCmd, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::TrigTarg", (Tcl_ObjCmdProc2 *)TrigTargCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindDerivWhen", (Tcl_ObjCmdProc2 *)FindDerivWhenCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindAt", (Tcl_ObjCmdProc2 *)FindAtCmdProc2, NULL, NULL);
@@ -60,6 +61,16 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     Tcl_CreateObjCommand2(interp, "::tclmeasure::Integ", (Tcl_ObjCmdProc2 *)IntegCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::MinMaxPPMinAtMaxAt", (Tcl_ObjCmdProc2 *)MinMaxPPMinAtMaxAtCmdProc2,
                           NULL, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::TrigTargVectors", (Tcl_ObjCmdProc2 *)TrigTargCmdProc2, (void *)1,
+                          NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::FindDerivWhenVectors", (Tcl_ObjCmdProc2 *)FindDerivWhenCmdProc2,
+                          (void *)1, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::FindAtVectors", (Tcl_ObjCmdProc2 *)FindAtCmdProc2, (void *)1, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::DerivAtVectors", (Tcl_ObjCmdProc2 *)DerivAtCmdProc2, (void *)1, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::IntegVectors", (Tcl_ObjCmdProc2 *)IntegCmdProc2, (void *)1, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::MinMaxPPMinAtMaxAtVectors",
+                          (Tcl_ObjCmdProc2 *)MinMaxPPMinAtMaxAtCmdProc2, (void *)1, NULL);
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::RmsVectors", (Tcl_ObjCmdProc2 *)IntegCmdProc2, (void *)2, NULL);
     return TCL_OK;
 }
 
@@ -167,8 +178,8 @@ static inline double CalcCrossPoint(double x11, double y11, double x21, double y
  *      double xwhen         - input: target X value (interpolation/evaluation point)
  *      double xip1          - input: X value at index `i + 1`
  *      Tcl_WideInt xlen     - input: total number of elements in the `x` array
- *      Tcl_Obj **x          - input: array of Tcl_Obj pointers holding X values (at least x[i-1] to x[i+2])
- *      Tcl_Obj **vec        - input: array of Tcl_Obj pointers holding corresponding Y values
+ *      const MeasureInput *x - input: read-only X samples needed by the stencil
+ *      const MeasureInput *vec - input: read-only corresponding Y samples
  *      double ywhen         - input: Y value at the point `xwhen` (for use in interpolation output)
  *      double *out          - output: pointer to a 6-element array to store the selected X and Y values
  *                                out[0..2] = selected X values (or interpolated positions)
@@ -180,88 +191,129 @@ static inline double CalcCrossPoint(double x11, double y11, double x21, double y
  *
  * Results:
  *      Populates the `out` buffer with 3 X values and 3 corresponding Y values to form a stencil around `xwhen`.
- *      Uses Tcl_GetDoubleFromObj to safely convert the values. The result is intended for slope or interpolation use.
+ *      Returns TCL_OK on success or TCL_ERROR when the shared sample accessor reports invalid data or indices.
  *
  * Side Effects:
- *      May set error messages in the interpreter if Tcl_GetDoubleFromObj fails (typically not expected if inputs
- *      are known to be numeric).
+ *      Sets an interpreter error on failed sample access; never evaluates Tcl or modifies input storage.
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
-                        Tcl_Obj **x, Tcl_Obj **vec, double ywhen, double *out, int *pos) {
+static int DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
+                       const MeasureInput *x, const MeasureInput *vec, double ywhen, double *out, int *pos) {
     if (i == 0) {
         if (xi == xwhen) {
             out[0] = xwhen;
             out[1] = xip1;
-            Tcl_GetDoubleFromObj(interp, x[i + 2], &out[2]);
+            if (MeasureGetDouble(interp, x, i + 2, &out[2]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[3] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[4]);
-            Tcl_GetDoubleFromObj(interp, vec[i + 2], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 1, &out[4]) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, vec, i + 2, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = -1;
         } else if (xip1 == xwhen) {
             out[0] = xi;
             out[1] = xwhen;
-            Tcl_GetDoubleFromObj(interp, x[i + 2], &out[2]);
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[3]);
+            if (MeasureGetDouble(interp, x, i + 2, &out[2]) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, vec, i + 1, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 2], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 2, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = 0;
         } else {
             out[0] = xi;
             out[1] = xwhen;
             out[2] = xip1;
-            Tcl_GetDoubleFromObj(interp, vec[i], &out[3]);
+            if (MeasureGetDouble(interp, vec, i, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 1, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = -1;
         }
     } else if (i == (xlen - 2)) {
         if (xip1 == xwhen) {
-            Tcl_GetDoubleFromObj(interp, x[i - 1], &out[0]);
+            if (MeasureGetDouble(interp, x, i - 1, &out[0]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[1] = xi;
             out[2] = xwhen;
-            Tcl_GetDoubleFromObj(interp, vec[i - 1], &out[3]);
-            Tcl_GetDoubleFromObj(interp, vec[i], &out[4]);
+            if (MeasureGetDouble(interp, vec, i - 1, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, vec, i, &out[4]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[5] = ywhen;
             *pos = 1;
         } else {
             out[0] = xi;
             out[1] = xwhen;
             out[2] = xip1;
-            Tcl_GetDoubleFromObj(interp, vec[i], &out[3]);
+            if (MeasureGetDouble(interp, vec, i, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 1, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = 1;
         }
     } else {
         if (xi == xwhen) {
-            Tcl_GetDoubleFromObj(interp, x[i - 1], &out[0]);
+            if (MeasureGetDouble(interp, x, i - 1, &out[0]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[1] = xwhen;
             out[2] = xip1;
-            Tcl_GetDoubleFromObj(interp, vec[i - 1], &out[3]);
+            if (MeasureGetDouble(interp, vec, i - 1, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 1, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = 0;
         } else if (xip1 == xwhen) {
             out[0] = xi;
             out[1] = xwhen;
-            Tcl_GetDoubleFromObj(interp, x[i + 2], &out[2]);
-            Tcl_GetDoubleFromObj(interp, vec[i], &out[3]);
+            if (MeasureGetDouble(interp, x, i + 2, &out[2]) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, vec, i, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 2], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 2, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = 0;
         } else {
             out[0] = xi;
             out[1] = xwhen;
             out[2] = xip1;
-            Tcl_GetDoubleFromObj(interp, vec[i], &out[3]);
+            if (MeasureGetDouble(interp, vec, i, &out[3]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             out[4] = ywhen;
-            Tcl_GetDoubleFromObj(interp, vec[i + 1], &out[5]);
+            if (MeasureGetDouble(interp, vec, i + 1, &out[5]) != TCL_OK) {
+                return TCL_ERROR;
+            }
             *pos = 0;
         }
     }
-    return;
+    return TCL_OK;
 }
 
 /*
@@ -315,21 +367,25 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
  *
  * TrigTargCmdProc2 --
  *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
  *      Tcl command implementation that analyzes two vector signals (trigVec and targVec) over a shared time base (x),
  *      detects specified edge transitions (rise, fall, or crossing) for each vector, and returns the time difference
  *      between the trigger and target events. The function supports both fixed occurrence counts and "last" mode to
  *      capture the final matching transition.
  *
  * Parameters:
- *      void *clientData              - input: optional client data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: interpreter used for argument parsing and result/error reporting
  *      Tcl_Size objc                 - input: number of arguments passed to the command
  *      Tcl_Obj *const objv[]         - input: argument vector; expected format:
  *
- *              objv[1]  = x           - Tcl list of numeric X values (time base)
- *              objv[2]  = trigVec     - Tcl list of Y values for the trigger signal
+ *              objv[1]  = x           - Tcl list or real vector name for X values (time base)
+ *              objv[2]  = trigVec     - Tcl list or real vector name for the trigger signal
  *              objv[3]  = val1        - trigger threshold value
- *              objv[4]  = targVec     - Tcl list of Y values for the target signal
+ *              objv[4]  = targVec     - Tcl list or real vector name for the target signal
  *              objv[5]  = val2        - target threshold value
  *              objv[6]  = trigCond    - trigger condition: "rise", "fall", or "cross"
  *              objv[7]  = trigCount   - trigger hit index to use (or "last")
@@ -347,7 +403,7 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
  *      On failure, returns TCL_ERROR and sets an error message in the interpreter.
  *
  * Side Effects:
- *      Parses and converts lists to arrays, and individual values to doubles and integers.
+ *      Opens read-only list/vector inputs and parses scalar values as doubles and integers.
  *      May allocate intermediate Tcl_Obj structures.
  *      Sets the interpreter result to either an error message or result dictionary.
  *
@@ -361,6 +417,10 @@ static double Deriv(double xim1, double xi, double xip1, double yim1, double yi,
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     int trigVecCount = 0;
     int targVecCount = 0;
     int trigVecFoundFlag = 0;
@@ -372,7 +432,7 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     double xTrig = 0.0;
     double xTarg = 0.0;
     if (objc != 12) {
-        Tcl_WrongNumArgs(interp, 11, objv,
+        Tcl_WrongNumArgs(interp, 1, objv,
                          "x trigVec val1 targVec val2 trigVecCond trigVecCondCount targVecCond targVecCondCount "
                          "trigVecDelay targVecDelay");
         return TCL_ERROR;
@@ -380,10 +440,14 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *xVec = objv[1];
     Tcl_Obj *trigVec = objv[2];
     double val1;
-    Tcl_GetDoubleFromObj(interp, objv[3], &val1);
+    if (Tcl_GetDoubleFromObj(interp, objv[3], &val1) != TCL_OK) {
+        return TCL_ERROR;
+    }
     Tcl_Obj *targVec = objv[4];
     double val2;
-    Tcl_GetDoubleFromObj(interp, objv[5], &val2);
+    if (Tcl_GetDoubleFromObj(interp, objv[5], &val2) != TCL_OK) {
+        return TCL_ERROR;
+    }
     int trigVecCond;
     if (!strcmp(Tcl_GetString(objv[6]), "rise")) {
         trigVecCond = COND_RISE;
@@ -396,7 +460,9 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     if (!strcmp(Tcl_GetString(objv[7]), "last")) {
         trigVecCondCount = -1;
     } else {
-        Tcl_GetWideIntFromObj(interp, objv[7], &trigVecCondCount);
+        if (Tcl_GetWideIntFromObj(interp, objv[7], &trigVecCondCount) != TCL_OK) {
+            return TCL_ERROR;
+        }
     }
     int targVecCond;
     if (!strcmp(Tcl_GetString(objv[8]), "rise")) {
@@ -410,47 +476,74 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     if (!strcmp(Tcl_GetString(objv[9]), "last")) {
         targVecCondCount = -1;
     } else {
-        Tcl_GetWideIntFromObj(interp, objv[9], &targVecCondCount);
+        if (Tcl_GetWideIntFromObj(interp, objv[9], &targVecCondCount) != TCL_OK) {
+            return TCL_ERROR;
+        }
     }
     double trigVecDelay;
-    Tcl_GetDoubleFromObj(interp, objv[10], &trigVecDelay);
+    if (Tcl_GetDoubleFromObj(interp, objv[10], &trigVecDelay) != TCL_OK) {
+        return TCL_ERROR;
+    }
     double targVecDelay;
-    Tcl_GetDoubleFromObj(interp, objv[11], &targVecDelay);
+    if (Tcl_GetDoubleFromObj(interp, objv[11], &targVecDelay) != TCL_OK) {
+        return TCL_ERROR;
+    }
 
     Tcl_Size xLen, trigVecLen, targVecLen;
-    Tcl_Obj **xVecElems, **trigVecElems, **targVecElems;
-    if (Tcl_ListObjGetElements(interp, xVec, &xLen, &xVecElems) == TCL_ERROR) {
+    MeasureInput xVecElems, trigVecElems, targVecElems;
+    if (MeasureOpenInput(interp, xVec, vectors, &xVecElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
-    if (Tcl_ListObjGetElements(interp, trigVec, &trigVecLen, &trigVecElems) == TCL_ERROR) {
+    xLen = xVecElems.length;
+    if (MeasureOpenInput(interp, trigVec, vectors, &trigVecElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
-    if (Tcl_ListObjGetElements(interp, targVec, &targVecLen, &targVecElems) == TCL_ERROR) {
+    trigVecLen = trigVecElems.length;
+    if (MeasureOpenInput(interp, targVec, vectors, &targVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    targVecLen = targVecElems.length;
+    if (xLen < 2) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
         return TCL_ERROR;
     }
     if (xLen != trigVecLen) {
-        Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of trigVec '%lld'", xLen, trigVecLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                          "d' is not equal to length of trigVec '%" TCL_SIZE_MODIFIER "d'",
+                                          xLen, trigVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     } else if (trigVecLen != targVecLen) {
-        Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of trigVec '%lld' is not equal to length of targVec '%lld'", trigVecLen, targVecLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of trigVec '%" TCL_SIZE_MODIFIER
+                                          "d' is not equal to length of targVec '%" TCL_SIZE_MODIFIER "d'",
+                                          trigVecLen, targVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
     for (Tcl_Size i = 0; i < trigVecLen - 1; ++i) {
         double xi;
-        Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
+        if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if ((xi < trigVecDelay) && (xi < targVecDelay)) {
             continue;
         }
         double xip1, trigVecI, trigVecIp1, targVecI, targVecIp1;
-        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
-        Tcl_GetDoubleFromObj(interp, trigVecElems[i], &trigVecI);
-        Tcl_GetDoubleFromObj(interp, trigVecElems[i + 1], &trigVecIp1);
-        Tcl_GetDoubleFromObj(interp, targVecElems[i], &targVecI);
-        Tcl_GetDoubleFromObj(interp, targVecElems[i + 1], &targVecIp1);
+        if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &trigVecElems, i, &trigVecI) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &trigVecElems, i + 1, &trigVecIp1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &targVecElems, i, &targVecI) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &targVecElems, i + 1, &targVecIp1) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if (!trigVecFoundFlag && (xi >= trigVecDelay)) {
             int result;
             switch ((enum Conditions)trigVecCond) {
@@ -607,20 +700,24 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
  *
  * FindDerivWhenCmdProc2 --
  *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
  *      Implements a Tcl command to evaluate time-domain vector conditions (rise/fall/crossing) over one or more
  *      time-aligned signals. Depending on the selected mode, it returns either the time (`xWhen`) of a matching
  *      condition, the corresponding value from a secondary signal (`yFind`), or the derivative at the matched time.
  *      The function supports flexible condition targeting via explicit index, "last", or "all" modes.
  *
  * Parameters:
- *      void *clientData              - input: optional user data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: interpreter for result and error reporting
  *      Tcl_Size objc                 - input: number of command arguments
  *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
  *
- *          objv[1]  = x              - list of X (time) values
+ *          objv[1]  = x              - list or real vector name containing X (time) values
  *          objv[2]  = mode           - one of: when, wheneq, findwhen, findwheneq, derivwhen, derivwheneq
- *          objv[3]  = findVec        - list of values used for yFind or derivative computations
+ *          objv[3]  = findVec        - list or real vector name for yFind or derivative computations
  *          objv[4]  = whenVecLS      - left-side comparison signal for condition detection
  *          objv[5]  = val            - scalar threshold for single-vector comparisons
  *          objv[6]  = whenVecRS      - right-side signal (used for equality/cross-vector mode)
@@ -653,6 +750,10 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     double lastWhenHit[4] = {0.0, 0.0, 0.0, 0.0};
     int lastWhenHitSet = 0;
     double lastWhenHitCross[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -666,7 +767,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     Tcl_Obj *derYObj = Tcl_NewListObj(0, NULL);
 
     if (objc != 12) {
-        Tcl_WrongNumArgs(interp, 11, objv,
+        Tcl_WrongNumArgs(interp, 1, objv,
                          "x mode findVec whenVecLS val whenVecRS whenVecCond whenVecCondCount delay from to");
         return TCL_ERROR;
     }
@@ -678,7 +779,13 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     Tcl_Obj *findVec = objv[3];
     Tcl_Obj *whenVecLS = objv[4];
     double val;
-    Tcl_GetDoubleFromObj(interp, objv[5], &val);
+    if (mode == FDW_SWITCH_WHEN || mode == FDW_SWITCH_FINDWHEN || mode == FDW_SWITCH_DERIVWHEN) {
+        if (Tcl_GetDoubleFromObj(interp, objv[5], &val) != TCL_OK) {
+            return TCL_ERROR;
+        }
+    } else {
+        val = 0.0;
+    }
     Tcl_Obj *whenVecRS = objv[6];
     int whenVecCond;
     if (!strcmp(Tcl_GetString(objv[7]), "rise")) {
@@ -694,50 +801,70 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     } else if (!strcmp(Tcl_GetString(objv[8]), "all")) {
         whenVecCondCount = -2;
     } else {
-        Tcl_GetWideIntFromObj(interp, objv[8], &whenVecCondCount);
-    }
-    double delay;
-    Tcl_GetDoubleFromObj(interp, objv[9], &delay);
-    double from;
-    Tcl_GetDoubleFromObj(interp, objv[10], &from);
-    double to;
-    Tcl_GetDoubleFromObj(interp, objv[11], &to);
-
-    Tcl_Size xLen, findVecLen, whenVecLSLen, whenVecRSLen;
-    Tcl_Obj **xVecElems, **findVecElems, **whenVecLSElems, **whenVecRSElems;
-    if (Tcl_ListObjGetElements(interp, xVec, &xLen, &xVecElems) == TCL_ERROR) {
-        return TCL_ERROR;
-    }
-    if (Tcl_ListObjGetElements(interp, findVec, &findVecLen, &findVecElems) == TCL_ERROR) {
-        return TCL_ERROR;
-    }
-    if (Tcl_ListObjGetElements(interp, whenVecLS, &whenVecLSLen, &whenVecLSElems) == TCL_ERROR) {
-        return TCL_ERROR;
-    }
-    if (Tcl_ListObjGetElements(interp, whenVecRS, &whenVecRSLen, &whenVecRSElems) == TCL_ERROR) {
-        return TCL_ERROR;
-    }
-    if ((mode == FDW_SWITCH_WHEN) || (mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHEN) ||
-        (mode == FDW_SWITCH_FINDWHENEQ)) {
-        if (xLen != whenVecLSLen) {
-            Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of whenVecLS '%lld'", xLen, whenVecLSLen);
-            Tcl_SetObjResult(interp, errorMsg);
+        if (Tcl_GetWideIntFromObj(interp, objv[8], &whenVecCondCount) != TCL_OK) {
             return TCL_ERROR;
         }
+    }
+    double delay;
+    if (Tcl_GetDoubleFromObj(interp, objv[9], &delay) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    double from;
+    if (Tcl_GetDoubleFromObj(interp, objv[10], &from) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    double to;
+    if (Tcl_GetDoubleFromObj(interp, objv[11], &to) != TCL_OK) {
+        return TCL_ERROR;
+    }
+
+    Tcl_Size xLen, findVecLen, whenVecLSLen, whenVecRSLen;
+    MeasureInput xVecElems, findVecElems, whenVecLSElems, whenVecRSElems;
+    if (MeasureOpenInput(interp, xVec, vectors, &xVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    xLen = xVecElems.length;
+    if (MeasureOpenInput(interp, findVec, (vectors && mode != FDW_SWITCH_WHEN && mode != FDW_SWITCH_WHENEQ),
+                         &findVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    findVecLen = findVecElems.length;
+    if (MeasureOpenInput(interp, whenVecLS, vectors, &whenVecLSElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    whenVecLSLen = whenVecLSElems.length;
+    if (MeasureOpenInput(
+            interp, whenVecRS,
+            (vectors && (mode == FDW_SWITCH_WHENEQ || mode == FDW_SWITCH_FINDWHENEQ || mode == FDW_SWITCH_DERIVWHENEQ)),
+            &whenVecRSElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    whenVecRSLen = whenVecRSElems.length;
+    if (xLen < (mode == FDW_SWITCH_DERIVWHEN || mode == FDW_SWITCH_DERIVWHENEQ ? 3 : 2)) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
+        return TCL_ERROR;
+    }
+    if (xLen != whenVecLSLen) {
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                          "d' is not equal to length of whenVecLS '%" TCL_SIZE_MODIFIER "d'",
+                                          xLen, whenVecLSLen);
+        Tcl_SetObjResult(interp, errorMsg);
+        return TCL_ERROR;
     }
     if ((mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHENEQ) || (mode == FDW_SWITCH_DERIVWHENEQ)) {
         if (xLen != whenVecRSLen) {
-            Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of whenVecRS '%lld'", xLen, whenVecRSLen);
+            Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                              "d' is not equal to length of whenVecRS '%" TCL_SIZE_MODIFIER "d'",
+                                              xLen, whenVecRSLen);
             Tcl_SetObjResult(interp, errorMsg);
             return TCL_ERROR;
         }
     }
-    if ((mode == FDW_SWITCH_FINDWHEN) || (mode == FDW_SWITCH_DERIVWHEN)) {
+    if (mode != FDW_SWITCH_WHEN && mode != FDW_SWITCH_WHENEQ) {
         if (xLen != findVecLen) {
-            Tcl_Obj *errorMsg =
-                Tcl_ObjPrintf("Length of x '%lld' is not equal to length of findVec '%lld'", xLen, findVecLen);
+            Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                              "d' is not equal to length of findVec '%" TCL_SIZE_MODIFIER "d'",
+                                              xLen, findVecLen);
             Tcl_SetObjResult(interp, errorMsg);
             return TCL_ERROR;
         }
@@ -748,14 +875,22 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     if ((mode == FDW_SWITCH_WHEN) || (mode == FDW_SWITCH_FINDWHEN) || (mode == FDW_SWITCH_DERIVWHEN)) {
         for (Tcl_Size i = 0; i < whenVecLSLen - 1; ++i) {
             double xi;
-            Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
+            if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
+                return TCL_ERROR;
+            }
             if ((xi < (from + delay)) || (xi > to)) {
                 continue;
             }
             double xip1, whenVecLSI, whenVecLSIp1;
-            Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
-            Tcl_GetDoubleFromObj(interp, whenVecLSElems[i], &whenVecLSI);
-            Tcl_GetDoubleFromObj(interp, whenVecLSElems[i + 1], &whenVecLSIp1);
+            if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecLSElems, i, &whenVecLSI) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecLSElems, i + 1, &whenVecLSIp1) != TCL_OK) {
+                return TCL_ERROR;
+            }
             if (!whenVecFoundFlag) {
                 int result;
                 switch ((enum Conditions)whenVecCond) {
@@ -794,17 +929,27 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         lastWhenHitSet = 1;
                         if (mode == FDW_SWITCH_FINDWHEN) {
                             lastFindWhenHit[0] = xi;
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i], &lastFindWhenHit[1]);
+                            if (MeasureGetDouble(interp, &findVecElems, i, &lastFindWhenHit[1]) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                             lastFindWhenHit[2] = xip1;
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &lastFindWhenHit[3]);
+                            if (MeasureGetDouble(interp, &findVecElems, i + 1, &lastFindWhenHit[3]) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                         } else if (mode == FDW_SWITCH_DERIVWHEN) {
                             double findVecElemITemp;
                             double findVecElemIp1Temp;
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                            if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
+                            if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                             double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
-                            DerivSelect(interp, i, xi, xWhen, xip1, xLen, xVecElems, findVecElems, yDeriv,
-                                        lastDerYWhenHit, &lastDerYWhenHitPos);
+                            if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                            lastDerYWhenHit, &lastDerYWhenHitPos) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                         }
                     } else if (whenVecCondCount == -2) {
                         double xWhenLoc = CalcXBetween(xi, whenVecLSI, xip1, whenVecLSIp1, val);
@@ -813,8 +958,12 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         if (mode == FDW_SWITCH_FINDWHEN) {
                             double findVecElemITemp;
                             double findVecElemIp1Temp;
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                            if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
+                            if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                             double yFindLoc = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
                             Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFindLoc));
                         } else if (mode == FDW_SWITCH_DERIVWHEN) {
@@ -822,11 +971,17 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             double findVecElemIp1Temp;
                             double derivDataTemp[6];
                             int derivPosTemp;
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                            Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                            if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
+                            if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                             double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
-                            DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, xVecElems, findVecElems, yDeriv,
-                                        derivDataTemp, &derivPosTemp);
+                            if (DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                            derivDataTemp, &derivPosTemp) != TCL_OK) {
+                                return TCL_ERROR;
+                            }
                             double derYLoc = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2],
                                                    derivDataTemp[3], derivDataTemp[4], derivDataTemp[5], derivPosTemp);
                             Tcl_ListObjAppendElement(interp, derYObj, Tcl_NewDoubleObj(derYLoc));
@@ -843,8 +998,12 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                     if (mode == FDW_SWITCH_FINDWHEN) {
                         double findVecElemITemp;
                         double findVecElemIp1Temp;
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                        if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
+                        if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         yFind = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFind));
                     } else if (mode == FDW_SWITCH_DERIVWHEN) {
@@ -852,11 +1011,17 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double findVecElemIp1Temp;
                         double derivDataTemp[6];
                         int derivPosTemp;
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                        if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
+                        if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
-                        DerivSelect(interp, i, xi, xWhen, xip1, xLen, xVecElems, findVecElems, yDeriv, derivDataTemp,
-                                    &derivPosTemp);
+                        if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                        derivDataTemp, &derivPosTemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
                                      derivDataTemp[4], derivDataTemp[5], derivPosTemp);
                         Tcl_ListObjAppendElement(interp, derYObj, Tcl_NewDoubleObj(derY));
@@ -868,16 +1033,28 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     } else if ((mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHENEQ) || (mode == FDW_SWITCH_DERIVWHENEQ)) {
         for (Tcl_Size i = 0; i < whenVecLSLen - 1; ++i) {
             double xi;
-            Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
+            if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
+                return TCL_ERROR;
+            }
             if ((xi < (from + delay)) || (xi > to)) {
                 continue;
             }
             double xip1, whenVecLSI, whenVecLSIp1, whenVecRSI, whenVecRSIp1;
-            Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
-            Tcl_GetDoubleFromObj(interp, whenVecLSElems[i], &whenVecLSI);
-            Tcl_GetDoubleFromObj(interp, whenVecLSElems[i + 1], &whenVecLSIp1);
-            Tcl_GetDoubleFromObj(interp, whenVecRSElems[i], &whenVecRSI);
-            Tcl_GetDoubleFromObj(interp, whenVecRSElems[i + 1], &whenVecRSIp1);
+            if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecLSElems, i, &whenVecLSI) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecLSElems, i + 1, &whenVecLSIp1) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecRSElems, i, &whenVecRSI) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            if (MeasureGetDouble(interp, &whenVecRSElems, i + 1, &whenVecRSIp1) != TCL_OK) {
+                return TCL_ERROR;
+            }
             if (!whenVecFoundFlag) {
                 // check two lines crossing
                 if (((whenVecLSI >= whenVecRSI) && (whenVecLSIp1 <= whenVecRSIp1)) ||
@@ -920,17 +1097,27 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             lastWhenHitSet = 1;
                             if (mode == FDW_SWITCH_FINDWHEN) {
                                 lastFindWhenHit[0] = xi;
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i], &lastFindWhenHit[1]);
+                                if (MeasureGetDouble(interp, &findVecElems, i, &lastFindWhenHit[1]) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                                 lastFindWhenHit[2] = xip1;
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &lastFindWhenHit[3]);
+                                if (MeasureGetDouble(interp, &findVecElems, i + 1, &lastFindWhenHit[3]) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                             } else if (mode == FDW_SWITCH_DERIVWHEN) {
                                 double findVecElemITemp;
                                 double findVecElemIp1Temp;
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                                if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
+                                if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                                 double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
-                                DerivSelect(interp, i, xi, xWhen, xip1, xLen, xVecElems, findVecElems, yDeriv,
-                                            lastDerYWhenHit, &lastDerYWhenHitPos);
+                                if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                                lastDerYWhenHit, &lastDerYWhenHitPos) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                             }
                         } else if (whenVecCondCount == -2) {
                             double xWhenLoc =
@@ -940,8 +1127,12 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             if (mode == FDW_SWITCH_FINDWHENEQ) {
                                 double findVecElemITemp;
                                 double findVecElemIp1Temp;
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                                if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
+                                if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                                 double yFindLoc =
                                     CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
                                 Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFindLoc));
@@ -950,11 +1141,17 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                 double findVecElemIp1Temp;
                                 double derivDataTemp[6];
                                 int derivPosTemp;
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                                Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                                if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
+                                if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                                 double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
-                                DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, xVecElems, findVecElems, yDeriv,
-                                            derivDataTemp, &derivPosTemp);
+                                if (DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                                derivDataTemp, &derivPosTemp) != TCL_OK) {
+                                    return TCL_ERROR;
+                                }
                                 double derYLoc =
                                     Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
                                           derivDataTemp[4], derivDataTemp[5], derivPosTemp);
@@ -973,8 +1170,12 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                     if (mode == FDW_SWITCH_FINDWHENEQ) {
                         double findVecElemITemp;
                         double findVecElemIp1Temp;
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                        if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
+                        if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         yFind = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFind));
                     } else if (mode == FDW_SWITCH_DERIVWHENEQ) {
@@ -982,11 +1183,17 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double findVecElemIp1Temp;
                         double derivDataTemp[6];
                         int derivPosTemp;
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecElemITemp);
-                        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecElemIp1Temp);
+                        if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
+                        if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
-                        DerivSelect(interp, i, xi, xWhen, xip1, xLen, xVecElems, findVecElems, yDeriv, derivDataTemp,
-                                    &derivPosTemp);
+                        if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
+                                        derivDataTemp, &derivPosTemp) != TCL_OK) {
+                            return TCL_ERROR;
+                        }
                         derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
                                      derivDataTemp[4], derivDataTemp[5], derivPosTemp);
                         Tcl_ListObjAppendElement(interp, derYObj, Tcl_NewDoubleObj(derY));
@@ -1099,19 +1306,23 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
  *
  * FindAtCmdProc2 --
  *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
  *      Implements a Tcl command that performs linear interpolation on a time-aligned signal. Given a scalar X value,
  *      this command scans a sequence of (x, y) points and returns the interpolated Y value at the specified X.
  *      The interpolation uses the segment between two bounding X values that bracket the input X.
  *
  * Parameters:
- *      void *clientData              - input: optional user data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: interpreter used for result and error reporting
  *      Tcl_Size objc                 - input: number of command arguments
  *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
  *
- *          objv[1] = x        - list of X (time) values
+ *          objv[1] = x        - list or real vector name containing X (time) values
  *          objv[2] = val      - scalar X value to look up
- *          objv[3] = findVec  - list of Y values aligned with `x`
+ *          objv[3] = findVec  - list or real vector name containing Y values aligned with `x`
  *
  * Results:
  *      TCL_OK if `val` is within a segment in `x`; the corresponding interpolated Y value is returned via interpreter.
@@ -1132,23 +1343,36 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (objc != 4) {
-        Tcl_WrongNumArgs(interp, 3, objv, "x val findVec");
+        Tcl_WrongNumArgs(interp, 1, objv, "x val findVec");
         return TCL_ERROR;
     }
     Tcl_Size xLen, findVecLen;
-    Tcl_Obj **xVecElems, **findVecElems;
-    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xVecElems) == TCL_ERROR) {
+    MeasureInput xVecElems, findVecElems;
+    if (MeasureOpenInput(interp, objv[1], vectors, &xVecElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
+    xLen = xVecElems.length;
     double val;
-    Tcl_GetDoubleFromObj(interp, objv[2], &val);
-    if (Tcl_ListObjGetElements(interp, objv[3], &findVecLen, &findVecElems) == TCL_ERROR) {
+    if (Tcl_GetDoubleFromObj(interp, objv[2], &val) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (MeasureOpenInput(interp, objv[3], vectors, &findVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    findVecLen = findVecElems.length;
+    if (xLen < 2) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
         return TCL_ERROR;
     }
     if (xLen != findVecLen) {
-        Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of findVec '%lld'", xLen, findVecLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                          "d' is not equal to length of findVec '%" TCL_SIZE_MODIFIER "d'",
+                                          xLen, findVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -1156,10 +1380,18 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
     int foundFlag = 0;
     for (Tcl_Size i = 0; i < xLen - 1; ++i) {
         double xi, xip1, findVecI, findVecIp1;
-        Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
-        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
-        Tcl_GetDoubleFromObj(interp, findVecElems[i], &findVecI);
-        Tcl_GetDoubleFromObj(interp, findVecElems[i + 1], &findVecIp1);
+        if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &findVecElems, i, &findVecI) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecIp1) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if ((xi <= val) && (xip1 >= val)) {
             yFind = CalcYBetween(xi, findVecI, xip1, findVecIp1, val);
             foundFlag = 1;
@@ -1181,19 +1413,23 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
  *
  * DerivAtCmdProc2 --
  *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
  *      Implements a Tcl command that computes the numerical derivative of a signal vector at a specified X position.
  *      The derivative is estimated using a 3-point stencil around the interpolation point. The function searches for
  *      a segment [xi, xi+1] that brackets the given value and uses neighboring data (when available) for accuracy.
  *
  * Parameters:
- *      void *clientData              - input: optional user data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: interpreter for result or error message
  *      Tcl_Size objc                 - input: number of command arguments
  *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
  *
- *          objv[1] = x           - list of X (independent) values
+ *          objv[1] = x           - list or real vector name containing X (independent) values
  *          objv[2] = val         - scalar X value where derivative should be evaluated
- *          objv[3] = derivVec    - list of Y (dependent) values aligned with `x`
+ *          objv[3] = derivVec    - list or real vector name containing Y (dependent) values aligned with `x`
  *
  * Results:
  *      TCL_OK on success, with interpreter result set to a double representing the estimated derivative.
@@ -1204,8 +1440,8 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
  *          - val lying outside the data range
  *
  * Side Effects:
- *      Uses `DerivSelect()` to extract the proper 3-point stencil and compute the interpolated derivative using `Deriv()`.
- *      Sets the interpreter result to either a floating-point derivative or a descriptive error message.
+ *      Uses `DerivSelect()` to extract the proper 3-point stencil and compute the interpolated derivative using
+ * `Deriv()`. Sets the interpreter result to either a floating-point derivative or a descriptive error message.
  *
  * Notes:
  *      - Linear interpolation is used to estimate the Y value at `val`, then finite-difference is applied.
@@ -1215,23 +1451,36 @@ static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, T
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (objc != 4) {
-        Tcl_WrongNumArgs(interp, 3, objv, "x val derivVec");
+        Tcl_WrongNumArgs(interp, 1, objv, "x val derivVec");
         return TCL_ERROR;
     }
     Tcl_Size xLen, derivVecLen;
-    Tcl_Obj **xVecElems, **derivVecElems;
-    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xVecElems) == TCL_ERROR) {
+    MeasureInput xVecElems, derivVecElems;
+    if (MeasureOpenInput(interp, objv[1], vectors, &xVecElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
+    xLen = xVecElems.length;
     double val;
-    Tcl_GetDoubleFromObj(interp, objv[2], &val);
-    if (Tcl_ListObjGetElements(interp, objv[3], &derivVecLen, &derivVecElems) == TCL_ERROR) {
+    if (Tcl_GetDoubleFromObj(interp, objv[2], &val) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (MeasureOpenInput(interp, objv[3], vectors, &derivVecElems) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+    derivVecLen = derivVecElems.length;
+    if (xLen < 3) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
         return TCL_ERROR;
     }
     if (xLen != derivVecLen) {
-        Tcl_Obj *errorMsg =
-            Tcl_ObjPrintf("Length of x '%lld' is not equal to length of derivVec '%lld'", xLen, derivVecLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
+                                          "d' is not equal to length of derivVec '%" TCL_SIZE_MODIFIER "d'",
+                                          xLen, derivVecLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
@@ -1239,15 +1488,26 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
     int foundFlag = 0;
     for (Tcl_Size i = 0; i < xLen - 1; ++i) {
         double xi, xip1, derivVecI, derivVecIp1;
-        Tcl_GetDoubleFromObj(interp, xVecElems[i], &xi);
-        Tcl_GetDoubleFromObj(interp, xVecElems[i + 1], &xip1);
-        Tcl_GetDoubleFromObj(interp, derivVecElems[i], &derivVecI);
-        Tcl_GetDoubleFromObj(interp, derivVecElems[i + 1], &derivVecIp1);
+        if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &derivVecElems, i, &derivVecI) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &derivVecElems, i + 1, &derivVecIp1) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if ((xi <= val) && (xip1 >= val)) {
             double derivDataTemp[6];
             int derivPosTemp;
             yDeriv = CalcYBetween(xi, derivVecI, xip1, derivVecIp1, val);
-            DerivSelect(interp, i, xi, val, xip1, xLen, xVecElems, derivVecElems, yDeriv, derivDataTemp, &derivPosTemp);
+            if (DerivSelect(interp, i, xi, val, xip1, xLen, &xVecElems, &derivVecElems, yDeriv, derivDataTemp,
+                            &derivPosTemp) != TCL_OK) {
+                return TCL_ERROR;
+            }
             derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3], derivDataTemp[4],
                          derivDataTemp[5], derivPosTemp);
             foundFlag = 1;
@@ -1269,17 +1529,27 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
  *
  * IntegCmdProc2 --
  *
+ *      clientData == (void *)2 selects RMS: samples are squared before interpolation and the final result is
+ *      sqrt(integral / interval width), matching the Tcl list implementation. The cumulative flag must be false.
+ *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
+ *      clientData == (void *)2 selects RmsVectors: square samples before interpolation and return the square root
+ *      of the mean integral. Its cum argument must be false. The other vector variants use (void *)1.
+ *
  *      Implements a Tcl command that numerically integrates a Y vector over a given interval in X using the trapezoidal
  *      rule. Supports optional output of cumulative integral values over the integration domain.
  *
  * Parameters:
- *      void *clientData              - input: optional user data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: Tcl interpreter for error and result handling
  *      Tcl_Size objc                 - input: number of command arguments
  *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
  *
- *          objv[1] = x        - list of X values (time domain)
- *          objv[2] = y        - list of Y values (to integrate over X)
+ *          objv[1] = x        - list or real vector name containing X values (time domain)
+ *          objv[2] = y        - list or real vector name containing Y values (to integrate over X)
  *          objv[3] = xstart   - start of the integration interval (must lie within `x`)
  *          objv[4] = xend     - end of the integration interval (must lie within `x`)
  *          objv[5] = cum      - boolean flag; if true, return cumulative integral series as dict with "x" and "y" keys
@@ -1312,24 +1582,45 @@ static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, 
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (objc != 6) {
-        Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend cum");
+        Tcl_WrongNumArgs(interp, 1, objv, "x y xstart xend cum");
         return TCL_ERROR;
     }
     Tcl_Size xLen, yLen;
-    Tcl_Obj **xElems, **yElems;
-    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xElems) == TCL_ERROR) {
+    MeasureInput xElems, yElems;
+    if (MeasureOpenInput(interp, objv[1], vectors, &xElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
-    if (Tcl_ListObjGetElements(interp, objv[2], &yLen, &yElems) == TCL_ERROR) {
+    xLen = xElems.length;
+    if (MeasureOpenInput(interp, objv[2], vectors, &yElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
+    yLen = yElems.length;
+    yElems.square = (clientData == (void *)2);
     double xstart;
-    Tcl_GetDoubleFromObj(interp, objv[3], &xstart);
+    if (xLen < 2) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
+        return TCL_ERROR;
+    }
+    if (Tcl_GetDoubleFromObj(interp, objv[3], &xstart) != TCL_OK) {
+        return TCL_ERROR;
+    }
     double xend;
-    Tcl_GetDoubleFromObj(interp, objv[4], &xend);
+    if (Tcl_GetDoubleFromObj(interp, objv[4], &xend) != TCL_OK) {
+        return TCL_ERROR;
+    }
     int cumFlag;
-    Tcl_GetBooleanFromObj(interp, objv[5], &cumFlag);
+    if (Tcl_GetBooleanFromObj(interp, objv[5], &cumFlag) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (yElems.square && cumFlag) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("RMS does not support cumulative output", -1));
+        return TCL_ERROR;
+    }
     Tcl_Obj *xCum = NULL;
     Tcl_Obj *yCum = NULL;
     if (cumFlag) {
@@ -1337,13 +1628,18 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
         yCum = Tcl_NewListObj(0, NULL);
     }
     if (xLen != yLen) {
-        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%lld' is not equal to length of y '%lld'", xLen, yLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf(
+            "Length of x '%" TCL_SIZE_MODIFIER "d' is not equal to length of y '%" TCL_SIZE_MODIFIER "d'", xLen, yLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
     double xActualStart, xActualEnd;
-    Tcl_GetDoubleFromObj(interp, xElems[0], &xActualStart);
-    Tcl_GetDoubleFromObj(interp, xElems[xLen - 1], &xActualEnd);
+    if (MeasureGetDouble(interp, &xElems, 0, &xActualStart) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (MeasureGetDouble(interp, &xElems, xLen - 1, &xActualEnd) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (xstart < xActualStart) {
         Tcl_Obj *errorMsg = Tcl_ObjPrintf("Start of integration interval '%f' is outside the x values range", xstart);
         Tcl_SetObjResult(interp, errorMsg);
@@ -1359,15 +1655,23 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
     }
     int startFlagFound = 0;
     int endFlagFound = 0;
-    double ystart = 0, yend;
-    int istart = 0, iend;
+    double ystart = 0, yend = 0;
+    Tcl_Size istart = 0, iend = 0;
     double result = 0.0;
     for (Tcl_Size i = 0; i < xLen - 1; ++i) {
         double xi, xip1, yi, yip1;
-        Tcl_GetDoubleFromObj(interp, xElems[i], &xi);
-        Tcl_GetDoubleFromObj(interp, xElems[i + 1], &xip1);
-        Tcl_GetDoubleFromObj(interp, yElems[i], &yi);
-        Tcl_GetDoubleFromObj(interp, yElems[i + 1], &yip1);
+        if (MeasureGetDouble(interp, &xElems, i, &xi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &xElems, i + 1, &xip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &yElems, i, &yi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &yElems, i + 1, &yip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if ((xi <= xstart) && (xip1 >= xstart) && !startFlagFound) {
             ystart = CalcYBetween(xi, yi, xip1, yip1, xstart);
             istart = i;
@@ -1414,7 +1718,7 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
         Tcl_SetObjResult(interp, resultDict);
         return TCL_OK;
     } else {
-        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(yElems.square ? sqrt(result / (xend - xstart)) : result));
         return TCL_OK;
     }
 }
@@ -1422,241 +1726,17 @@ static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tc
 /*
  *----------------------------------------------------------------------------------------------------------------------
  *
- * findMinObj --
- *
- *      Find the minimum value among a list of Tcl_Obj pointers, each representing a numeric value. The function parses
- *      all elements as doubles and returns the smallest one.
- *
- * Parameters:
- *      Tcl_Interp *interp        - input/output: interpreter for error reporting if conversion fails
- *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (assumed to be numeric values)
- *      Tcl_Size len              - input: number of elements in the `objv` array
- *      double *result            - output: pointer to store the minimum value found
- *
- * Results:
- *      TCL_OK on success, and *result is set to the minimum double value from the array
- *      TCL_ERROR if:
- *          - len is zero or negative
- *          - any element in `objv` fails conversion to double (error message set in interpreter)
- *
- * Side Effects:
- *      On failure, sets an error message in the interpreter result
- *
- * Notes:
- *      - Uses `fmin()` to preserve IEEE behavior with NaNs if present.
- *      - All numeric values are interpreted as double precision.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
-    if (len <= 0)
-        return TCL_ERROR;
-    double min;
-    if (Tcl_GetDoubleFromObj(interp, objv[0], &min) != TCL_OK)
-        return TCL_ERROR;
-    for (Tcl_Size i = 1; i < len; i++) {
-        double val;
-        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
-            return TCL_ERROR;
-        min = fmin(min, val);
-    }
-    *result = min;
-    return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * findMaxObj --
- *
- *      Find the maximum value among a list of Tcl_Obj pointers, each representing a numeric value. The function parses
- *      all elements as doubles and returns the largest one.
- *
- * Parameters:
- *      Tcl_Interp *interp        - input/output: interpreter for error reporting if conversion fails
- *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to hold numeric values)
- *      Tcl_Size len              - input: number of elements in the `objv` array
- *      double *result            - output: pointer to store the maximum value found
- *
- * Results:
- *      TCL_OK on success, and *result is set to the maximum double value from the array
- *      TCL_ERROR if:
- *          - len is zero or negative
- *          - any element in `objv` cannot be converted to a double (error set in interpreter)
- *
- * Side Effects:
- *      On failure, sets an error message in the interpreter result
- *
- * Notes:
- *      - Uses `fmax()` to ensure IEEE compliance (e.g., handling NaNs).
- *      - All values are treated as double-precision floating point.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
-    if (len <= 0)
-        return TCL_ERROR;
-    double max;
-    if (Tcl_GetDoubleFromObj(interp, objv[0], &max) != TCL_OK)
-        return TCL_ERROR;
-    for (Tcl_Size i = 1; i < len; i++) {
-        double val;
-        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
-            return TCL_ERROR;
-        max = fmax(max, val);
-    }
-    *result = max;
-    return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * findMinIndexObj --
- *
- *      Find the index of the minimum value in an array of Tcl_Obj pointers. Each element is expected to be a numeric
- *      Tcl object. The function scans the list, converts values to doubles, and returns the index of the smallest one.
- *
- * Parameters:
- *      Tcl_Interp *interp        - input/output: interpreter used for error reporting on conversion failure
- *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to contain numeric values)
- *      Tcl_Size len              - input: number of elements in the array
- *      Tcl_Size *index           - output: pointer to store the index of the minimum value found
- *
- * Results:
- *      TCL_OK on success, with *index set to the position of the minimum value
- *      TCL_ERROR if:
- *          - len is zero or negative
- *          - any element cannot be converted to a double
- *
- * Side Effects:
- *      On error, sets a message in the interpreter result
- *
- * Notes:
- *      - Uses strict `<` comparison; if multiple equal minimum values exist, the first is returned.
- *      - All values are interpreted as doubles during comparison.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
-    if (len <= 0)
-        return TCL_ERROR;
-    double minVal;
-    if (Tcl_GetDoubleFromObj(interp, objv[0], &minVal) != TCL_OK)
-        return TCL_ERROR;
-    Tcl_Size minIdx = 0;
-    for (Tcl_Size i = 1; i < len; i++) {
-        double val;
-        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
-            return TCL_ERROR;
-        if (val < minVal) {
-            minVal = val;
-            minIdx = i;
-        }
-    }
-    *index = minIdx;
-    return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * findMaxIndexObj --
- *
- *      Find the index of the maximum value in an array of Tcl_Obj pointers. Each element is expected to represent
- *      a numeric value. The function converts each element to a double and returns the index of the largest one.
- *
- * Parameters:
- *      Tcl_Interp *interp        - input/output: interpreter used for error reporting if conversion fails
- *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (assumed to hold numeric values)
- *      Tcl_Size len              - input: number of elements in the array
- *      Tcl_Size *index           - output: pointer to store the index of the maximum value
- *
- * Results:
- *      TCL_OK on success, with *index set to the position of the maximum value
- *      TCL_ERROR if:
- *          - len is zero or negative
- *          - any element fails to convert to a double
- *
- * Side Effects:
- *      On failure, sets an error message in the interpreter
- *
- * Notes:
- *      - Uses strict `>` comparison; if multiple equal maximum values exist, the first is returned.
- *      - Comparison and value extraction are performed using double-precision floating point.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index) {
-    if (len <= 0)
-        return TCL_ERROR;
-    double maxVal;
-    if (Tcl_GetDoubleFromObj(interp, objv[0], &maxVal) != TCL_OK)
-        return TCL_ERROR;
-    Tcl_Size maxIdx = 0;
-    for (Tcl_Size i = 1; i < len; i++) {
-        double val;
-        if (Tcl_GetDoubleFromObj(interp, objv[i], &val) != TCL_OK)
-            return TCL_ERROR;
-        if (val > maxVal) {
-            maxVal = val;
-            maxIdx = i;
-        }
-    }
-    *index = maxIdx;
-    return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * findPPObj --
- *
- *      Compute the peak-to-peak (PP) range of a list of Tcl_Obj values by summing the absolute values of the minimum
- *      and maximum elements. Each value is parsed as a double.
- *
- * Parameters:
- *      Tcl_Interp *interp        - input/output: interpreter used for error reporting if conversion fails
- *      Tcl_Obj *const objv[]     - input: array of Tcl_Obj pointers (expected to contain numeric values)
- *      Tcl_Size len              - input: number of elements in the array
- *      double *result            - output: pointer to store the computed peak-to-peak range
- *
- * Results:
- *      TCL_OK on success, with *result set to fabs(min) + fabs(max)
- *      TCL_ERROR if:
- *          - `findMinObj` or `findMaxObj` fails (due to invalid input or empty list)
- *
- * Side Effects:
- *      May set an error message in the interpreter if conversion fails
- *
- * Notes:
- *      - Unlike traditional peak-to-peak (max - min), this function returns `fabs(min) + fabs(max)`
- *        which is useful for symmetric or absolute range calculations.
- *      - All values are interpreted as double-precision numbers.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result) {
-    double min, max;
-    if (findMinObj(interp, objv, len, &min) != TCL_OK)
-        return TCL_ERROR;
-    if (findMaxObj(interp, objv, len, &max) != TCL_OK)
-        return TCL_ERROR;
-    *result = fabs(min) + fabs(max);
-    return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
  * ListRange --
  *
- *      Create a new Tcl list consisting of a prefix element (`firstObj`), a subrange of elements from `listObj`,
+ *      Reads a selected range through MeasureInput. List elements retain their existing Tcl objects; vector
+ *      samples become double objects only in this selected output range. Never creates an RBC vector.
+ *
+ *      Create a new Tcl list consisting of a prefix element (`firstObj`), a subrange of elements from `input`,
  *      and a suffix element (`lastObj`). The subrange is defined by the `start` and `end` indices (inclusive).
  *
  * Parameters:
  *      Tcl_Interp *interp        - input: interpreter used for memory management (and list manipulation)
- *      Tcl_Obj *listObj          - input: Tcl list object from which to extract a subrange
+ *      const MeasureInput *input - input: list or vector view from which to extract a subrange
  *      Tcl_Size start            - input: starting index of the subrange (inclusive)
  *      Tcl_Size end              - input: ending index of the subrange (inclusive)
  *      Tcl_Obj *firstObj         - input: object to prepend to the result list
@@ -1679,24 +1759,25 @@ int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *r
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
+Tcl_Obj *ListRange(Tcl_Interp *interp, const MeasureInput *input, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
                    Tcl_Obj *lastObj) {
-    Tcl_Obj **elemPtrs;
-    Tcl_Size listLen;
-    Tcl_ListObjGetElements(interp, listObj, &listLen, &elemPtrs);
-    if (start >= listLen) {
-        start = listLen;
-    }
-    if (end >= listLen) {
-        end = listLen - 1;
-    }
-    if (start > end || start >= listLen) {
-        return Tcl_NewListObj(0, NULL);
-    }
-    Tcl_Size rangeLen = end - start + 1;
     Tcl_Obj *resultList = Tcl_NewListObj(0, NULL);
     Tcl_ListObjAppendElement(interp, resultList, firstObj);
-    Tcl_ListObjAppendList(interp, resultList, Tcl_NewListObj(rangeLen, &elemPtrs[start]));
+    if (start < 0) {
+        start = 0;
+    }
+    if (end >= input->length) {
+        end = input->length - 1;
+    }
+    for (Tcl_Size i = start; i <= end; ++i) {
+        Tcl_Obj *element;
+        if (input->elements != NULL) {
+            element = input->elements[i];
+        } else {
+            element = Tcl_NewDoubleObj(input->values[i]);
+        }
+        Tcl_ListObjAppendElement(interp, resultList, element);
+    }
     Tcl_ListObjAppendElement(interp, resultList, lastObj);
     return resultList;
 }
@@ -1706,19 +1787,23 @@ Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Siz
  *
  * MinMaxPPMinAtMaxAtCmdProc2 --
  *
+ *      List and Vectors commands share this implementation through MeasureInput. The latter borrows real RBC
+ *      sample storage after initializing stubs in this interpreter. Results remain Tcl scalars, lists or
+ *      dictionaries; no vectors are created. No Tcl evaluation or event processing occurs while reading inputs.
+ *
  *      Implements a Tcl command that analyzes a segment of a (x, y) signal and computes a statistical result over
  *      that interval. Supported result types include min/max values, peak-to-peak range, and the x-location of
  *      the min/max value. The interval is defined by `xstart` and `xend`, and the command supports optional
  *      extraction of the segment as a dictionary.
  *
  * Parameters:
- *      void *clientData              - input: optional user data (unused)
+ *      void *clientData              - input: NULL for lists; non-NULL for real RBC vector names
  *      Tcl_Interp *interp            - input/output: interpreter for result and error reporting
  *      Tcl_Size objc                 - input: number of command arguments
  *      Tcl_Obj *const objv[]         - input: command arguments, expected as:
  *
- *          objv[1] = x        - list of X values (monotonically increasing)
- *          objv[2] = y        - list of Y values (aligned with X)
+ *          objv[1] = x        - list or real vector name containing X values (monotonically increasing)
+ *          objv[2] = y        - list or real vector name containing Y values (aligned with X)
  *          objv[3] = xstart   - start of the range (inclusive)
  *          objv[4] = xend     - end of the range (inclusive)
  *          objv[5] = type     - operation to perform:
@@ -1744,34 +1829,48 @@ Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Siz
  *
  * Side Effects:
  *      - Performs interpolation at the edges of the integration interval using `CalcYBetween`
- *      - Creates temporary lists to isolate subranges of x and y for processing
+ *      - Creates output lists only for the between operation
  *      - Allocates and returns result as either a scalar, list, or dictionary
  *
  * Notes:
  *      - The range [xstart, xend] must lie entirely within the input X domain
  *      - Subrange data includes interpolated boundary points at xstart and xend
- *      - Uses helper functions: `findMinObj`, `findMaxObj`, `findPPObj`, `findMinIndexObj`, `findMaxIndexObj`
+ *      - Scans clipped samples through MeasureGetDouble; only TYPE_BETWEEN creates output lists.
  *      - Requires at least 2 X/Y samples in the interval to function correctly
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
 static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]) {
+    int vectors = (clientData != NULL);
+    if (vectors && MeasureInitVectors(interp) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (objc != 6) {
-        Tcl_WrongNumArgs(interp, 5, objv, "x y xstart xend type");
+        Tcl_WrongNumArgs(interp, 1, objv, "x y xstart xend type");
         return TCL_ERROR;
     }
     Tcl_Size xLen, yLen;
-    Tcl_Obj **xElems, **yElems;
-    if (Tcl_ListObjGetElements(interp, objv[1], &xLen, &xElems) == TCL_ERROR) {
+    MeasureInput xElems, yElems;
+    if (MeasureOpenInput(interp, objv[1], vectors, &xElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
-    if (Tcl_ListObjGetElements(interp, objv[2], &yLen, &yElems) == TCL_ERROR) {
+    xLen = xElems.length;
+    if (MeasureOpenInput(interp, objv[2], vectors, &yElems) == TCL_ERROR) {
         return TCL_ERROR;
     }
+    yLen = yElems.length;
     double xstart;
-    Tcl_GetDoubleFromObj(interp, objv[3], &xstart);
+    if (xLen < 2) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
+        return TCL_ERROR;
+    }
+    if (Tcl_GetDoubleFromObj(interp, objv[3], &xstart) != TCL_OK) {
+        return TCL_ERROR;
+    }
     double xend;
-    Tcl_GetDoubleFromObj(interp, objv[4], &xend);
+    if (Tcl_GetDoubleFromObj(interp, objv[4], &xend) != TCL_OK) {
+        return TCL_ERROR;
+    }
     int type;
     const char *typeStr = Tcl_GetString(objv[5]);
     if (!strcmp(typeStr, "min")) {
@@ -1790,13 +1889,18 @@ static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_
         return TCL_ERROR;
     }
     if (xLen != yLen) {
-        Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%lld' is not equal to length of y '%lld'", xLen, yLen);
+        Tcl_Obj *errorMsg = Tcl_ObjPrintf(
+            "Length of x '%" TCL_SIZE_MODIFIER "d' is not equal to length of y '%" TCL_SIZE_MODIFIER "d'", xLen, yLen);
         Tcl_SetObjResult(interp, errorMsg);
         return TCL_ERROR;
     }
     double xActualStart, xActualEnd;
-    Tcl_GetDoubleFromObj(interp, xElems[0], &xActualStart);
-    Tcl_GetDoubleFromObj(interp, xElems[xLen - 1], &xActualEnd);
+    if (MeasureGetDouble(interp, &xElems, 0, &xActualStart) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    if (MeasureGetDouble(interp, &xElems, xLen - 1, &xActualEnd) != TCL_OK) {
+        return TCL_ERROR;
+    }
     if (xstart < xActualStart) {
         Tcl_Obj *errorMsg = Tcl_ObjPrintf("Start of integration interval '%f' is outside the x values range", xstart);
         Tcl_SetObjResult(interp, errorMsg);
@@ -1812,14 +1916,22 @@ static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_
     }
     int startFlagFound = 0;
     int endFlagFound = 0;
-    double ystart = 0, yend;
-    int istart = 0, iend;
+    double ystart = 0, yend = 0;
+    Tcl_Size istart = 0, iend = 0;
     for (Tcl_Size i = 0; i < xLen - 1; ++i) {
         double xi, xip1, yi, yip1;
-        Tcl_GetDoubleFromObj(interp, xElems[i], &xi);
-        Tcl_GetDoubleFromObj(interp, xElems[i + 1], &xip1);
-        Tcl_GetDoubleFromObj(interp, yElems[i], &yi);
-        Tcl_GetDoubleFromObj(interp, yElems[i + 1], &yip1);
+        if (MeasureGetDouble(interp, &xElems, i, &xi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &xElems, i + 1, &xip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &yElems, i, &yi) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (MeasureGetDouble(interp, &yElems, i + 1, &yip1) != TCL_OK) {
+            return TCL_ERROR;
+        }
         if ((xi <= xstart) && (xip1 >= xstart) && !startFlagFound) {
             ystart = CalcYBetween(xi, yi, xip1, yip1, xstart);
             istart = i;
@@ -1831,65 +1943,60 @@ static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_
             break;
         }
     }
-    Tcl_Obj *targetArrayObjs;
-    Tcl_Obj **targetArrayObjsElems;
-    Tcl_Size targetArrayLen;
-    if (endFlagFound) {
-        targetArrayObjs =
-            ListRange(interp, objv[2], istart + 1, iend, Tcl_NewDoubleObj(ystart), Tcl_NewDoubleObj(yend));
-        if (Tcl_ListObjGetElements(interp, targetArrayObjs, &targetArrayLen, &targetArrayObjsElems) == TCL_ERROR) {
-            return TCL_ERROR;
-        }
-        double result;
-        Tcl_Obj *targetXArrayObjs;
-        Tcl_Obj **targetXArrayObjsElems;
-        Tcl_Size targetXArrayLen;
-        switch ((enum Types)type) {
-        case TYPE_MIN:
-            findMinObj(interp, targetArrayObjsElems, targetArrayLen, &result);
-            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
-            break;
-        case TYPE_MAX:
-            findMaxObj(interp, targetArrayObjsElems, targetArrayLen, &result);
-            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
-            break;
-        case TYPE_PP:
-            findPPObj(interp, targetArrayObjsElems, targetArrayLen, &result);
-            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
-            break;
-        case TYPE_MINAT:
-            targetXArrayObjs =
-                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
-            if (Tcl_ListObjGetElements(interp, targetXArrayObjs, &targetXArrayLen, &targetXArrayObjsElems) ==
-                TCL_ERROR) {
-                return TCL_ERROR;
-            }
-            Tcl_Size minIndex;
-            findMinIndexObj(interp, targetArrayObjsElems, targetArrayLen, &minIndex);
-            Tcl_SetObjResult(interp, targetXArrayObjsElems[minIndex]);
-            break;
-        case TYPE_MAXAT:
-            targetXArrayObjs =
-                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
-            if (Tcl_ListObjGetElements(interp, targetXArrayObjs, &targetXArrayLen, &targetXArrayObjsElems) ==
-                TCL_ERROR) {
-                return TCL_ERROR;
-            }
-            Tcl_Size maxIndex;
-            findMaxIndexObj(interp, targetArrayObjsElems, targetArrayLen, &maxIndex);
-            Tcl_SetObjResult(interp, targetXArrayObjsElems[maxIndex]);
-            break;
-        case TYPE_BETWEEN:
-            targetXArrayObjs =
-                ListRange(interp, objv[1], istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend));
-            Tcl_Obj *resultDict = Tcl_NewDictObj();
-            Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("x", -1), targetXArrayObjs);
-            Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("y", -1), targetArrayObjs);
-            Tcl_SetObjResult(interp, resultDict);
-            break;
-        };
-        return TCL_OK;
-    } else {
+    if (!endFlagFound) {
         return TCL_ERROR;
     }
+    if (type == TYPE_BETWEEN) {
+        Tcl_Obj *resultDict = Tcl_NewDictObj();
+        Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("x", -1),
+                       ListRange(interp, &xElems, istart + 1, iend, Tcl_NewDoubleObj(xstart), Tcl_NewDoubleObj(xend)));
+        Tcl_DictObjPut(interp, resultDict, Tcl_NewStringObj("y", -1),
+                       ListRange(interp, &yElems, istart + 1, iend, Tcl_NewDoubleObj(ystart), Tcl_NewDoubleObj(yend)));
+        Tcl_SetObjResult(interp, resultDict);
+        return TCL_OK;
+    }
+
+    /* Scan the same clipped sequence as before, without building temporary Tcl lists.
+     * Boundary indices -1 and -2 denote the interpolated start and end respectively.
+     * Strict comparisons retain the first occurrence when several samples are equal. */
+    double minValue = ystart, maxValue = ystart;
+    Tcl_Size minIndex = -1, maxIndex = -1;
+    for (Tcl_Size i = istart + 1; i <= iend + 1; ++i) {
+        double value;
+        Tcl_Size index = i;
+        if (i == iend + 1) {
+            value = yend;
+            index = -2;
+        } else if (MeasureGetDouble(interp, &yElems, i, &value) != TCL_OK) {
+            return TCL_ERROR;
+        }
+        if (value < minValue) {
+            minValue = value;
+            minIndex = index;
+        }
+        if (value > maxValue) {
+            maxValue = value;
+            maxIndex = index;
+        }
+    }
+    if (type == TYPE_MINAT || type == TYPE_MAXAT) {
+        Tcl_Size index = (type == TYPE_MINAT) ? minIndex : maxIndex;
+        if (index >= 0 && xElems.elements != NULL) {
+            /* Preserve the original list element object for list input. */
+            Tcl_SetObjResult(interp, xElems.elements[index]);
+        } else {
+            double value;
+            if (index < 0) {
+                value = (index == -1) ? xstart : xend;
+            } else if (MeasureGetDouble(interp, &xElems, index, &value) != TCL_OK) {
+                return TCL_ERROR;
+            }
+            Tcl_SetObjResult(interp, Tcl_NewDoubleObj(value));
+        }
+    } else {
+        /* Preserve the existing PP definition, fabs(min) + fabs(max). */
+        double result = (type == TYPE_MIN) ? minValue : (type == TYPE_MAX) ? maxValue : fabs(minValue) + fabs(maxValue);
+        Tcl_SetObjResult(interp, Tcl_NewDoubleObj(result));
+    }
+    return TCL_OK;
 }

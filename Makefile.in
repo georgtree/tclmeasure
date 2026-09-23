@@ -219,6 +219,9 @@ $(PKG_STUB_LIB_FILE): $(PKG_STUB_OBJECTS)
 	${MAKE_STUB_LIB}
 	$(RANLIB_STUB) $(PKG_STUB_LIB_FILE)
 
+# Private headers are shared by both input modes.
+$(PKG_OBJECTS): $(srcdir)/generic/tclmeasure.h $(srcdir)/generic/tclmeasureInput.h
+
 VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win:$(srcdir)/macosx
 
 .c.@OBJEXT@:

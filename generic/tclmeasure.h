@@ -1,4 +1,5 @@
 #include <tcl.h>
+#include "tclmeasureInput.h"
 
 enum Conditions { COND_RISE = 0, COND_FALL, COND_CROSS };
 enum FindDerivWhenSwitchId {
@@ -23,15 +24,10 @@ static int TrigTargCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int FindAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int DerivAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
-static void DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
-                        Tcl_Obj **x, Tcl_Obj **vec, double ywhen, double *out, int *pos);
+static int DerivSelect(Tcl_Interp *interp, Tcl_WideInt i, double xi, double xwhen, double xip1, Tcl_WideInt xlen,
+                       const MeasureInput *x, const MeasureInput *vec, double ywhen, double *out, int *pos);
 static double Deriv(double xim1, double xi, double xip1, double yim1, double yi, double yip1, int type);
 static int IntegCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 static int MinMaxPPMinAtMaxAtCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
-Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
+Tcl_Obj *ListRange(Tcl_Interp *interp, const MeasureInput *input, Tcl_Size start, Tcl_Size end, Tcl_Obj *firstObj,
                    Tcl_Obj *lastObj);
-int findMinObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);
-int findMaxObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);
-int findMinIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index);
-int findMaxIndexObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, Tcl_Size *index);
-int findPPObj(Tcl_Interp *interp, Tcl_Obj *const objv[], Tcl_Size len, double *result);

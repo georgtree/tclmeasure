@@ -41,8 +41,15 @@
 <section id="commands">
 <span id="r-tclmeasure-commands"></span><span id="r-3a3atclmeasureqzcommands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
 <section id="measure">
-<span id="r-3a3atclmeasure3a3ameasure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading">¶</a></h3>
-<p>Does different measurements of input data lists.</p>
+<span id="r-symbolqz3a3atclmeasure3a3ameasure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading">¶</a></h3>
+<p>Does different measurements of input data lists or real RBC vectors.
+With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
+in the caller’s namespace; direct vector support must be enabled at build time with –with-rbc.
+Vector names are passed directly to C without converting the samples to lists. All modes preserve their
+existing scalar/list/dictionary results and never create result vectors. Mapped array variables are optional.
+Complex vectors are rejected. X must be strictly increasing and all inputs must have equal sample counts.
+Vector index offsets do not change sample alignment. Derivatives need at least three samples; other modes
+need at least two. See the installation page for optional RBC build and runtime dependencies.</p>
 <pre class="literal-block"><strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
 <strong>measure</strong> <em>-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
 <strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-at value}</em>
@@ -64,7 +71,7 @@
 <dd class="field-odd"><p>Contains conditions for fetching data in the interval.</p>
 </dd>
 <dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-data</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Dictionary that contains lists with names as the keys and lists as the values.</p>
+<dd class="field-even"><p>Optional dictionary of named lists; omitting it selects direct RBC vector input.</p>
 </dd>
 <dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-deriv</span></code><span class="colon">:</span></dt>
 <dd class="field-odd"><p>Contains conditions for deriv (see below), requires -when or -at.</p>
@@ -100,7 +107,7 @@
 <dd class="field-odd"><p>Contains conditions for when (see below)</p>
 </dd>
 <dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-xname</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Name of x list in data dictionary. This list must be strictly increaing without duplicate elements.</p>
+<dd class="field-even"><p>Name of x list in data dictionary, or RBC vector command when -data is omitted. This list must be strictly increaing without duplicate elements.</p>
 </dd>
 </dl>
 <p class="rubric">Description</p>
@@ -115,7 +122,7 @@ The conditions for trigger and target could be in two forms: hit of certain valu
 certain exact point on x axis. These conditions are provided as a list of arguments to -trig and -targ switches:</p>
 <dl class="field-list simple">
 <dt class="field-odd">-vec<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+<dd class="field-odd"><p>Key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-even">-val<span class="colon">:</span></dt>
 <dd class="field-even"><p>Value to match.</p>
@@ -158,7 +165,7 @@ Possible combinations of switches are <code class="docutils literal notranslate"
 switches are:</p>
 <dl class="field-list simple">
 <dt class="field-odd">-vec<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+<dd class="field-odd"><p>Key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-even">-val<span class="colon">:</span></dt>
 <dd class="field-even"><p>Value to match.</p>
@@ -185,10 +192,10 @@ switches are:</p>
 <p>or</p>
 <dl class="field-list simple">
 <dt class="field-odd">-vec1<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Name of first vector in data dictionary.</p>
+<dd class="field-odd"><p>First key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-even">-vec2<span class="colon">:</span></dt>
-<dd class="field-even"><p>Name of second vector in data dictionary.</p>
+<dd class="field-even"><p>Second key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-odd">-td<span class="colon">:</span></dt>
 <dd class="field-odd"><p>X axis delay after which the search is start, default is 0.0.</p>
@@ -243,7 +250,7 @@ Examples of usages:</p>
 <p>This mode is combination of many modes with the same interface.</p>
 <dl class="field-list simple">
 <dt class="field-odd">-vec<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+<dd class="field-odd"><p>Key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-even">-from<span class="colon">:</span></dt>
 <dd class="field-even"><p>Start of the range in which search happens, default is minimum value of x.</p>
@@ -261,7 +268,7 @@ Examples of usages:</p>
 <p>This mode is combination of many modes with the same interface.</p>
 <dl class="field-list simple">
 <dt class="field-odd">-vec<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Name of vector in data dictionary.</p>
+<dd class="field-odd"><p>Key in data dictionary, or RBC vector command when -data is omitted.</p>
 </dd>
 <dt class="field-even">-from<span class="colon">:</span></dt>
 <dd class="field-even"><p>Start of the integration range, default is minimum value of x.</p>

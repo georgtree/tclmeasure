@@ -1,7 +1,7 @@
 '\"
 '\" '\" Copyright (c) George Yashin
 '\"
-.TH "tclmeasure" 3tcl 0\&.5 "tclmeasure" "tclmeasure package"
+.TH "tclmeasure" 3tcl 0\&.9 "tclmeasure" "tclmeasure package"
 .SH NAME
 Introduction - tclmeasure package
 .SH SYNOPSIS
@@ -65,6 +65,62 @@ For Windows build it is strongly recommended to use \fIMSYS64 UCRT64 environment
 steps are identical if you run it from UCRT64 shell\&.
 .PP
 There are prebuilt packages that contains \&.so/\&.dll files, tcl code and tests for Windows and Linux\&.
+.SH "OPTIONAL DIRECT RBC VECTOR INPUT"
+.PP
+The default build supports Tcl lists and does not need RBC headers or libraries\&. To enable direct real-vector
+input from \fIrbc-tk9\fP [URL: https://github\&.com/georgtree/rbc-tk9], build with Tcl 9 and the current RBC 0\&.5\&.0 API:
+.PP
+.RS 4n
+.nf
+\&./configure --with-tcl=/path/to/tcl/lib --with-rbc=/path/to/rbc-tk9
+make
+.fi
+.RE
+.PP
+--with-rbc accepts an RBC source tree, an installation prefix, or a directory containing rbcVector\&.h,
+rbcDecls\&.h and rbcStubLib\&.c\&. The supplied stub client source is compiled into tclmeasure; the RBC shared
+library is not linked into tclmeasure\&. Use matching RBC headers and runtime\&. --without-rbc explicitly selects
+the default list-only build\&. Run make clean when changing this option in an existing build directory\&.
+.PP
+Even an RBC-enabled build can load and process lists without RBC installed\&. The rbc::vector package is loaded
+only when vector input is requested\&. Tk initialization is not required for vector measurements; the installed
+RBC binary must still have its own system library dependencies available\&.
+.PP
+With -data, measurement inputs are lists looked up in that dictionary, as before\&. Omit -data to interpret
+-xname, -vec, -vec1, -vec2, -find and -deriv as RBC vector command names:
+.PP
+.RS 4n
+.nf
+package require tclmeasure
+package require rbc::vector
+rbc::vector create time signal
+time set {0 1 2 3}
+signal set {0 2 4 6}
+::tclmeasure::measure -xname time -trig {-at 0\&.5} -targ {-vec signal -val 3 -rise 1}
+# -> xtrig 0\&.5 xtarg 1\&.5 xdelta 1\&.0
+.fi
+.RE
+.PP
+All measurement modes accept vectors\&. Names are resolved in the namespace of the caller of measure, with
+normal Tcl command lookup; fully qualified names also work\&. Use the vector's actual command name, not a Tcl
+alias or an imported command with a different name\&. Mapped array variables are not needed\&. Only real vectors
+are supported, with equal sample counts and strictly increasing X values\&. External vector index offsets do
+not affect sample alignment\&. Supply at least two samples, or three for derivative measurements\&.
+.PP
+The wrapper passes names directly to C; it does not extract the full vectors as lists\&. A shared read-only
+accessor serves both input types\&. RMS squares samples while reading, before interpolation, matching the list
+implementation without creating a temporary vector\&. Inputs are not modified\&. Returned values retain the
+existing scalar, list and dictionary forms, including -between, -integ -cum and -cross all; no result
+vectors are created\&. Existing interpolation and measurement semantics are unchanged\&.
+.PP
+The internal C commands retain their original list signatures\&. Their Vectors counterparts use the same
+arguments with vector names in the data positions; unused FindDerivWhenVectors inputs remain empty strings\&.
+RmsVectors uses the IntegVectors signature with the final cumulative flag set to false\&. These commands
+initialize stubs in the current interpreter before borrowing sample storage and do not evaluate Tcl or process
+events while reading it\&.
+.PP
+The test suite retains the list cases and repeats them with vector names and the same expected results when
+rbc::vector and direct vector support are available\&. Run it against both build configurations\&.
 .SH "SUPPORTED PLATFORMS"
 .PP
 Any OS that has tcl9\&.0 (Linux, Windows, FreeBSD)\&.
@@ -79,7 +135,14 @@ Also on Linux you can open manpages installed after run of make install\&.
 \fBmeasure\fR (::tclmeasure)
 .RE
 .PP
-Does different measurements of input data lists\&.
+Does different measurements of input data lists or real RBC vectors\&.
+With -data, names select lists in the supplied dictionary\&. Without -data, names select RBC vector commands
+in the caller's namespace; direct vector support must be enabled at build time with --with-rbc\&.
+Vector names are passed directly to C without converting the samples to lists\&. All modes preserve their
+existing scalar/list/dictionary results and never create result vectors\&. Mapped array variables are optional\&.
+Complex vectors are rejected\&. X must be strictly increasing and all inputs must have equal sample counts\&.
+Vector index offsets do not change sample alignment\&. Derivatives need at least three samples; other modes
+need at least two\&. See the installation page for optional RBC build and runtime dependencies\&.
 .RS 4n
 \fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
@@ -114,7 +177,7 @@ Contains conditions for finding average value across the interval\&.
 Contains conditions for fetching data in the interval\&.
 .TP
 -data
-Dictionary that contains lists with names as the keys and lists as the values\&.
+Optional dictionary of named lists; omitting it selects direct RBC vector input\&.
 .TP
 -deriv
 Contains conditions for deriv (see below), requires -when or -at\&.
@@ -150,7 +213,7 @@ Contains conditions for trigger (see below), selects Trigger-Target measurement,
 Contains conditions for when (see below)
 .TP
 -xname
-Name of x list in data dictionary\&. This list must be strictly increaing without duplicate elements\&.
+Name of x list in data dictionary, or RBC vector command when -data is omitted\&. This list must be strictly increaing without duplicate elements\&.
 .RE
 .PP
 \fBDescription\fR
@@ -169,7 +232,7 @@ certain exact point on x axis\&. These conditions are provided as a list of argu
 .RS 4n
 .TP
 -vec
-Name of vector in data dictionary\&.
+Key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -val
 Value to match\&.
@@ -225,7 +288,7 @@ switches are:
 .RS 4n
 .TP
 -vec
-Name of vector in data dictionary\&.
+Key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -val
 Value to match\&.
@@ -253,10 +316,10 @@ or
 .RS 4n
 .TP
 -vec1
-Name of first vector in data dictionary\&.
+First key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -vec2
-Name of second vector in data dictionary\&.
+Second key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -td
 X axis delay after which the search is start, default is 0\&.0\&.
@@ -338,7 +401,7 @@ This mode is combination of many modes with the same interface\&.
 .RS 4n
 .TP
 -vec
-Name of vector in data dictionary\&.
+Key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -from
 Start of the range in which search happens, default is minimum value of x\&.
@@ -363,7 +426,7 @@ This mode is combination of many modes with the same interface\&.
 .RS 4n
 .TP
 -vec
-Name of vector in data dictionary\&.
+Key in data dictionary, or RBC vector command when -data is omitted\&.
 .TP
 -from
 Start of the integration range, default is minimum value of x\&.
