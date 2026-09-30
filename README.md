@@ -141,3 +141,12 @@ subdirectories inside that prefix are preserved. `DESTDIR` is not included in ar
 not write to the configured system prefix. `DIST_ROOT` and `DIST_NAME` may be overridden to choose the archive output
 directory and name; `DIST_NAME` must be a single directory name. Run `dist-clean` separately, not alongside `dist`
 or `dist-zip` in the same parallel make invocation.
+
+## Memory regression tests
+
+Run `make test` with an ordinary Tcl build for the functional tests. The
+`test/whenMemory.test` tests call the native measurement command directly to
+check result lifetime and error handling independently of argparse. Live
+allocation checks additionally require Tcl built with `--enable-symbols=mem`;
+these checks are automatically skipped on ordinary Tcl builds. They cover all
+six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.

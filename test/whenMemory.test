@@ -1,0 +1,72 @@
+package require tcltest
+namespace import ::tcltest::*
+package require tclmeasure
+
+
+variable calls {}
+foreach mode {when wheneq findwhen findwheneq derivwhen derivwheneq} {
+    set rhs {}
+    if {[string match *eq $mode]} {set rhs {1 1 1 1 1}}
+    dict set calls $mode [list ::tclmeasure::FindDerivWhen {0 1 2 3 4} $mode {0 2 4 6 8} {0 2 0 2 0} 1 $rhs rise\
+                                  all 0 0 4]
+}
+dict set calls arity {::tclmeasure::FindDerivWhen}
+dict set calls invalid [lreplace [dict get $calls when] 5 5 bad]
+dict set calls partial [lreplace [dict get $calls findwhen] 4 4 {0 2 0 bad 0}]
+dict set calls missing [lreplace [dict get $calls when] 8 8 100]
+dict set calls missingeq [lreplace [dict get $calls wheneq] 8 8 100]
+proc bytes {} {
+    regexp {current bytes allocated\s+([0-9]+)} [memory info] -> n
+    return $n
+}
+proc batch {command} {
+    for {set i 0} {$i < 200} {incr i} {
+        catch {{*}$command}
+    }
+}
+
+testConstraint memoryDebug [expr {[info commands memory] ne {}}]
+foreach mode {when wheneq findwhen findwheneq derivwhen derivwheneq} {
+    set counts {1 all}
+    if {$mode ni {findwheneq derivwheneq}} {
+        lappend counts last
+    }
+    foreach count $counts {
+        test when-result-$mode-$count {selected result survives temporary-list cleanup} -body {
+            set command [lreplace [dict get $calls $mode] 8 8 $count]
+            set actual [lmap n [{*}$command] {format %.8g $n}]
+            switch -glob $mode {
+                when* {set expected {0.5 2.5}}
+                find* {set expected {1 5}}
+                deriv* {set expected {2 2}}
+            }
+            if {$count eq {1}} {
+                set expected [lrange $expected 0 0]
+            }
+            if {$count eq {last}} {
+                set expected [lrange $expected end end]
+            }
+            expr {$actual eq $expected}
+        } -result 1
+    }
+}
+foreach mode {arity invalid partial missing missingeq} {
+    test when-error-$mode {errors still propagate after temporary-list cleanup} -body {
+        catch {{*}[dict get $alls $mode]}
+    } -result 1
+}
+
+# Call the C entry point directly to isolate this leak from argument parsing.
+foreach mode [dict keys $calls] {
+    test when-memory-$mode {success and failure release all working result lists} -constraints memoryDebug -body {
+        set command [dict get $calls $mode]
+        bytes
+        batch $command
+        set before [bytes]
+        batch $command
+        expr {[bytes] - $before < 8192}
+    } -result 1
+}
+
+unset -nocomplain command actual expected before mode count counts
+cleanupTests

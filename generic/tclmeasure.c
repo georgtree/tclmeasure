@@ -762,26 +762,33 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
     double lastDerYWhenHit[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     int lastDerYWhenHitPos;
     int xWhenSet = 0;
+    int code = TCL_ERROR;
+    Tcl_Obj *countObj = NULL;
     Tcl_Obj *xWhenObj = Tcl_NewListObj(0, NULL);
     Tcl_Obj *yFindObj = Tcl_NewListObj(0, NULL);
     Tcl_Obj *derYObj = Tcl_NewListObj(0, NULL);
+    /* Own all working lists until cleanup. Tcl_SetObjResult retains the
+     * selected list independently; unused and partially filled lists are freed. */
+    Tcl_IncrRefCount(xWhenObj);
+    Tcl_IncrRefCount(yFindObj);
+    Tcl_IncrRefCount(derYObj);
 
     if (objc != 12) {
         Tcl_WrongNumArgs(interp, 1, objv,
                          "x mode findVec whenVecLS val whenVecRS whenVecCond whenVecCondCount delay from to");
-        return TCL_ERROR;
+        goto cleanup;
     }
     Tcl_Obj *xVec = objv[1];
     int mode;
     if (Tcl_GetIndexFromObj(NULL, objv[2], FindDerivWhenSwitches, "mode", 0, &mode) != TCL_OK) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     Tcl_Obj *findVec = objv[3];
     Tcl_Obj *whenVecLS = objv[4];
     double val;
     if (mode == FDW_SWITCH_WHEN || mode == FDW_SWITCH_FINDWHEN || mode == FDW_SWITCH_DERIVWHEN) {
         if (Tcl_GetDoubleFromObj(interp, objv[5], &val) != TCL_OK) {
-            return TCL_ERROR;
+            goto cleanup;
         }
     } else {
         val = 0.0;
@@ -802,54 +809,54 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         whenVecCondCount = -2;
     } else {
         if (Tcl_GetWideIntFromObj(interp, objv[8], &whenVecCondCount) != TCL_OK) {
-            return TCL_ERROR;
+            goto cleanup;
         }
     }
     double delay;
     if (Tcl_GetDoubleFromObj(interp, objv[9], &delay) != TCL_OK) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     double from;
     if (Tcl_GetDoubleFromObj(interp, objv[10], &from) != TCL_OK) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     double to;
     if (Tcl_GetDoubleFromObj(interp, objv[11], &to) != TCL_OK) {
-        return TCL_ERROR;
+        goto cleanup;
     }
 
     Tcl_Size xLen, findVecLen, whenVecLSLen, whenVecRSLen;
     MeasureInput xVecElems, findVecElems, whenVecLSElems, whenVecRSElems;
     if (MeasureOpenInput(interp, xVec, vectors, &xVecElems) == TCL_ERROR) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     xLen = xVecElems.length;
     if (MeasureOpenInput(interp, findVec, (vectors && mode != FDW_SWITCH_WHEN && mode != FDW_SWITCH_WHENEQ),
                          &findVecElems) == TCL_ERROR) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     findVecLen = findVecElems.length;
     if (MeasureOpenInput(interp, whenVecLS, vectors, &whenVecLSElems) == TCL_ERROR) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     whenVecLSLen = whenVecLSElems.length;
     if (MeasureOpenInput(
             interp, whenVecRS,
             (vectors && (mode == FDW_SWITCH_WHENEQ || mode == FDW_SWITCH_FINDWHENEQ || mode == FDW_SWITCH_DERIVWHENEQ)),
             &whenVecRSElems) == TCL_ERROR) {
-        return TCL_ERROR;
+        goto cleanup;
     }
     whenVecRSLen = whenVecRSElems.length;
     if (xLen < (mode == FDW_SWITCH_DERIVWHEN || mode == FDW_SWITCH_DERIVWHENEQ ? 3 : 2)) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("not enough samples for measurement", -1));
-        return TCL_ERROR;
+        goto cleanup;
     }
     if (xLen != whenVecLSLen) {
         Tcl_Obj *errorMsg = Tcl_ObjPrintf("Length of x '%" TCL_SIZE_MODIFIER
                                           "d' is not equal to length of whenVecLS '%" TCL_SIZE_MODIFIER "d'",
                                           xLen, whenVecLSLen);
         Tcl_SetObjResult(interp, errorMsg);
-        return TCL_ERROR;
+        goto cleanup;
     }
     if ((mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHENEQ) || (mode == FDW_SWITCH_DERIVWHENEQ)) {
         if (xLen != whenVecRSLen) {
@@ -857,7 +864,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                               "d' is not equal to length of whenVecRS '%" TCL_SIZE_MODIFIER "d'",
                                               xLen, whenVecRSLen);
             Tcl_SetObjResult(interp, errorMsg);
-            return TCL_ERROR;
+            goto cleanup;
         }
     }
     if (mode != FDW_SWITCH_WHEN && mode != FDW_SWITCH_WHENEQ) {
@@ -866,7 +873,7 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                               "d' is not equal to length of findVec '%" TCL_SIZE_MODIFIER "d'",
                                               xLen, findVecLen);
             Tcl_SetObjResult(interp, errorMsg);
-            return TCL_ERROR;
+            goto cleanup;
         }
     }
     Tcl_WideInt whenVecCount = 0;
@@ -876,20 +883,20 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         for (Tcl_Size i = 0; i < whenVecLSLen - 1; ++i) {
             double xi;
             if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if ((xi < (from + delay)) || (xi > to)) {
                 continue;
             }
             double xip1, whenVecLSI, whenVecLSIp1;
             if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecLSElems, i, &whenVecLSI) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecLSElems, i + 1, &whenVecLSIp1) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (!whenVecFoundFlag) {
                 int result;
@@ -930,25 +937,25 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         if (mode == FDW_SWITCH_FINDWHEN) {
                             lastFindWhenHit[0] = xi;
                             if (MeasureGetDouble(interp, &findVecElems, i, &lastFindWhenHit[1]) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             lastFindWhenHit[2] = xip1;
                             if (MeasureGetDouble(interp, &findVecElems, i + 1, &lastFindWhenHit[3]) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                         } else if (mode == FDW_SWITCH_DERIVWHEN) {
                             double findVecElemITemp;
                             double findVecElemIp1Temp;
                             if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                             if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                             lastDerYWhenHit, &lastDerYWhenHitPos) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                         }
                     } else if (whenVecCondCount == -2) {
@@ -959,10 +966,10 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             double findVecElemITemp;
                             double findVecElemIp1Temp;
                             if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             double yFindLoc = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
                             Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFindLoc));
@@ -972,15 +979,15 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             double derivDataTemp[6];
                             int derivPosTemp;
                             if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
                             if (DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                             derivDataTemp, &derivPosTemp) != TCL_OK) {
-                                return TCL_ERROR;
+                                goto cleanup;
                             }
                             double derYLoc = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2],
                                                    derivDataTemp[3], derivDataTemp[4], derivDataTemp[5], derivPosTemp);
@@ -999,10 +1006,10 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double findVecElemITemp;
                         double findVecElemIp1Temp;
                         if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         yFind = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFind));
@@ -1012,15 +1019,15 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double derivDataTemp[6];
                         int derivPosTemp;
                         if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                         derivDataTemp, &derivPosTemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
                                      derivDataTemp[4], derivDataTemp[5], derivPosTemp);
@@ -1034,26 +1041,26 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         for (Tcl_Size i = 0; i < whenVecLSLen - 1; ++i) {
             double xi;
             if (MeasureGetDouble(interp, &xVecElems, i, &xi) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if ((xi < (from + delay)) || (xi > to)) {
                 continue;
             }
             double xip1, whenVecLSI, whenVecLSIp1, whenVecRSI, whenVecRSIp1;
             if (MeasureGetDouble(interp, &xVecElems, i + 1, &xip1) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecLSElems, i, &whenVecLSI) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecLSElems, i + 1, &whenVecLSIp1) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecRSElems, i, &whenVecRSI) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (MeasureGetDouble(interp, &whenVecRSElems, i + 1, &whenVecRSIp1) != TCL_OK) {
-                return TCL_ERROR;
+                goto cleanup;
             }
             if (!whenVecFoundFlag) {
                 // check two lines crossing
@@ -1098,25 +1105,25 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                             if (mode == FDW_SWITCH_FINDWHEN) {
                                 lastFindWhenHit[0] = xi;
                                 if (MeasureGetDouble(interp, &findVecElems, i, &lastFindWhenHit[1]) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 lastFindWhenHit[2] = xip1;
                                 if (MeasureGetDouble(interp, &findVecElems, i + 1, &lastFindWhenHit[3]) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                             } else if (mode == FDW_SWITCH_DERIVWHEN) {
                                 double findVecElemITemp;
                                 double findVecElemIp1Temp;
                                 if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                                 if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                                 lastDerYWhenHit, &lastDerYWhenHitPos) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                             }
                         } else if (whenVecCondCount == -2) {
@@ -1128,10 +1135,10 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                 double findVecElemITemp;
                                 double findVecElemIp1Temp;
                                 if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 double yFindLoc =
                                     CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
@@ -1142,15 +1149,15 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                                 double derivDataTemp[6];
                                 int derivPosTemp;
                                 if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhenLoc);
                                 if (DerivSelect(interp, i, xi, xWhenLoc, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                                 derivDataTemp, &derivPosTemp) != TCL_OK) {
-                                    return TCL_ERROR;
+                                    goto cleanup;
                                 }
                                 double derYLoc =
                                     Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
@@ -1171,10 +1178,10 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double findVecElemITemp;
                         double findVecElemIp1Temp;
                         if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         yFind = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         Tcl_ListObjAppendElement(interp, yFindObj, Tcl_NewDoubleObj(yFind));
@@ -1184,15 +1191,15 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
                         double derivDataTemp[6];
                         int derivPosTemp;
                         if (MeasureGetDouble(interp, &findVecElems, i, &findVecElemITemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         if (MeasureGetDouble(interp, &findVecElems, i + 1, &findVecElemIp1Temp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         double yDeriv = CalcYBetween(xi, findVecElemITemp, xip1, findVecElemIp1Temp, xWhen);
                         if (DerivSelect(interp, i, xi, xWhen, xip1, xLen, &xVecElems, &findVecElems, yDeriv,
                                         derivDataTemp, &derivPosTemp) != TCL_OK) {
-                            return TCL_ERROR;
+                            goto cleanup;
                         }
                         derY = Deriv(derivDataTemp[0], derivDataTemp[1], derivDataTemp[2], derivDataTemp[3],
                                      derivDataTemp[4], derivDataTemp[5], derivPosTemp);
@@ -1253,13 +1260,15 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         } else if (whenVecCondCount == -1) {
             vecCondCount = "last";
         } else {
-            vecCondCount = Tcl_GetString(Tcl_NewWideIntObj(whenVecCondCount));
+            countObj = Tcl_NewWideIntObj(whenVecCondCount);
+            Tcl_IncrRefCount(countObj);
+            vecCondCount = Tcl_GetString(countObj);
         }
         Tcl_Obj *errorMsg =
             Tcl_ObjPrintf("When value '%f' with conditions '%s %s delay=%f from=%f to=%f' was not found", val,
                           condition, vecCondCount, delay, from, to);
         Tcl_SetObjResult(interp, errorMsg);
-        return TCL_ERROR;
+        goto cleanup;
     } else if (((mode == FDW_SWITCH_WHENEQ) || (mode == FDW_SWITCH_FINDWHENEQ) || (mode == FDW_SWITCH_DERIVWHENEQ)) &&
                !xWhenSet) {
         const char *condition;
@@ -1280,25 +1289,37 @@ static int FindDerivWhenCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size 
         } else if (whenVecCondCount == -1) {
             vecCondCount = "last";
         } else {
-            vecCondCount = Tcl_GetString(Tcl_NewWideIntObj(whenVecCondCount));
+            countObj = Tcl_NewWideIntObj(whenVecCondCount);
+            Tcl_IncrRefCount(countObj);
+            vecCondCount = Tcl_GetString(countObj);
         }
         Tcl_Obj *errorMsg =
             Tcl_ObjPrintf("Cross between vectors with conditions '%s %s delay=%f from=%f to=%f' was not found",
                           condition, vecCondCount, delay, from, to);
         Tcl_SetObjResult(interp, errorMsg);
-        return TCL_ERROR;
+        goto cleanup;
     }
     if ((mode == FDW_SWITCH_WHEN) || (mode == FDW_SWITCH_WHENEQ)) {
         Tcl_SetObjResult(interp, xWhenObj);
-        return TCL_OK;
+        code = TCL_OK;
+        goto cleanup;
     } else if ((mode == FDW_SWITCH_FINDWHEN) || (mode == FDW_SWITCH_FINDWHENEQ)) {
         Tcl_SetObjResult(interp, yFindObj);
-        return TCL_OK;
+        code = TCL_OK;
+        goto cleanup;
     } else if ((mode == FDW_SWITCH_DERIVWHEN) || (mode == FDW_SWITCH_DERIVWHENEQ)) {
         Tcl_SetObjResult(interp, derYObj);
-        return TCL_OK;
+        code = TCL_OK;
+        goto cleanup;
     }
-    return TCL_ERROR;
+cleanup:
+    if (countObj != NULL) {
+        Tcl_DecrRefCount(countObj);
+    }
+    Tcl_DecrRefCount(xWhenObj);
+    Tcl_DecrRefCount(yFindObj);
+    Tcl_DecrRefCount(derYObj);
+    return code;
 }
 
 /*
