@@ -6,7 +6,10 @@ set sourceDir "${docDir}/../"
 source [file join $docDir startPage.ruff]
 source [file join $sourceDir tclmeasure.tcl]
 
-set packageVersion [package versions tclmeasure]
+set packageVersion [package provide tclmeasure]
+if {$packageVersion eq {}} {
+    return -code error "Package version is empty"
+}
 set title "tclmeasure package"
 set commonSphinx [list -title $title -sortnamespaces false -preamble $startPage -pagesplit namespace -recurse false\
                         -includesource false -pagesplit namespace -autopunctuate true -compact false\
@@ -32,6 +35,14 @@ class MyTclLexer(TclLexer):
     def get_tokens_unprocessed(self, text):
         for i, t, v in super().get_tokens_unprocessed(text):
             if v == "=":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "$":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "\\":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "%":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "'":
                 yield i, Operator, v   # or Name.Builtin
             else:
                 yield i, t, v

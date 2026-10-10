@@ -53,6 +53,7 @@ proc ::tclmeasure::FromTo {argsDict xData vectors} {
 }
 
 proc ::tclmeasure::measure {args} {
+    # Read-only RBC vectors are valid inputs; measurement never modifies or unlocks their storage.
     # Does different measurements of input data lists or real RBC vectors.
     # With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
     # in the caller's namespace; direct vector support must be enabled at build time with --with-rbc.

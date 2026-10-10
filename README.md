@@ -43,6 +43,9 @@ make
 library is not linked into tclmeasure. Use matching RBC headers and runtime. `--without-rbc` explicitly selects
 the default list-only build. Run `make clean` when changing this option in an existing build directory.
 
+Read-only RBC vectors are accepted as inputs; tclmeasure never writes vector storage or changes the lock.
+No new read-only stubs are required, so the existing RBC runtime requirement is unchanged.
+
 Even an RBC-enabled build can load and process lists without RBC installed. The `rbc::vector` package is loaded
 only when vector input is requested. Tk initialization is not required for vector measurements; the installed
 RBC binary must still have its own system library dependencies available.

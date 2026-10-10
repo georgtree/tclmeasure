@@ -42,7 +42,8 @@
 <span id="r-tclmeasure-commands"></span><span id="r-3a3atclmeasureqzcommands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
 <section id="measure">
 <span id="r-symbolqz3a3atclmeasure3a3ameasure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading">¶</a></h3>
-<p>Does different measurements of input data lists or real RBC vectors.
+<p>Read-only RBC vectors are valid inputs; measurement never modifies or unlocks their storage.
+Does different measurements of input data lists or real RBC vectors.
 With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
 in the caller’s namespace; direct vector support must be enabled at build time with –with-rbc.
 Vector names are passed directly to C without converting the samples to lists. All modes preserve their

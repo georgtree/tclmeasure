@@ -1253,6 +1253,22 @@ if {![catch {package require rbc::vector}] && ![catch {::tclmeasure::VectorSuppo
         unset measureLibrary rbcLibrary
     }
 
+    # Measurement only borrows input storage; a data lock must not reject it.
+    testConstraint measureReadOnly [package vsatisfies [package provide rbc::vector] 0.8.1]
+    test VectorInput-readonly {locked vectors remain valid measurement inputs} -constraints measureReadOnly -setup {
+        set beforeX [x index :]
+        set beforeY [y1 index :]
+        foreach v {x y1 y2} {$v readonly true}
+    } -body {
+        set trigger [::tclmeasure::measure -xname x -trig {-vec y1 -val 0.1 -rise 3} -targ {-vec y2 -val 0.5 -fall 5}]
+        set avg [::tclmeasure::measure -xname x -avg {-vec y1 -from 4 -to 25}]
+        list [expr {abs([dict get $trigger xdelta]-13.513196468971069)<1e-10}] \
+             [expr {abs($avg+0.0783097020051382)<1e-10}] \
+             [expr {$beforeX eq [x index :] && $beforeY eq [y1 index :]}] [x readonly] [y1 readonly]
+    } -cleanup {
+        foreach v {x y1 y2} {$v readonly false}
+    } -result {1 1 1 1 1}
+
     rbc::vector destroy x y1 y2 xsym y1sym y2sym xloc yloc
 }
 

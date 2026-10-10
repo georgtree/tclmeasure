@@ -43,7 +43,8 @@ int MeasureInitVectors(Tcl_Interp *interp) {
  *
  *      Opens obj as a list, or as a vector name when vectors is nonzero. Vector callers must first initialize
  *      stubs with MeasureInitVectors. Returned storage is borrowed, read-only and valid only while the source
- *      remains unchanged. Vector offsets do not affect sample positions. Complex vectors are rejected.
+ *      remains unchanged. RBC read-only vectors are valid inputs: never require write permission or unlock them.
+ *      Vector offsets do not affect sample positions. Complex vectors are rejected.
  *
  * Results:
  *      TCL_OK with input initialized, or TCL_ERROR with an explanatory interpreter result. No buffers or vectors
