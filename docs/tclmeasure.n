@@ -68,7 +68,7 @@ There are prebuilt packages that contains \&.so/\&.dll files, tcl code and tests
 .SH "OPTIONAL DIRECT RBC VECTOR INPUT"
 .PP
 The default build supports Tcl lists and does not need RBC headers or libraries\&. To enable direct real-vector
-input from \fIrbc-tk9\fP [URL: https://github\&.com/georgtree/rbc-tk9], build with Tcl 9 and the current RBC 0\&.5\&.0 API:
+input from \fIrbc-tk9\fP [URL: https://github\&.com/georgtree/rbc-tk9], build with Tcl 9 and the current RBC 0\&.8\&.1 API:
 .PP
 .RS 4n
 .nf
@@ -81,6 +81,9 @@ make
 rbcDecls\&.h and rbcStubLib\&.c\&. The supplied stub client source is compiled into tclmeasure; the RBC shared
 library is not linked into tclmeasure\&. Use matching RBC headers and runtime\&. --without-rbc explicitly selects
 the default list-only build\&. Run make clean when changing this option in an existing build directory\&.
+.PP
+Read-only RBC vectors are accepted as inputs; tclmeasure never writes vector storage or changes the lock\&.
+No new read-only stubs are required, so the existing RBC runtime requirement is unchanged\&.
 .PP
 Even an RBC-enabled build can load and process lists without RBC installed\&. The rbc::vector package is loaded
 only when vector input is requested\&. Tk initialization is not required for vector measurements; the installed
@@ -128,6 +131,75 @@ Any OS that has tcl9\&.0 (Linux, Windows, FreeBSD)\&.
 .PP
 You can find some documentation \fIhere\fP [URL: https://georgtree\&.github\&.io/tclmeasure]\&.
 Also on Linux you can open manpages installed after run of make install\&.
+.SH "INSTALLATION LAYOUT AND REMOVAL"
+.PP
+Installation follows the rbc-tk9 layout and honors the directories selected by configure:
+.TP
+\(bu
+The package library, Tcl scripts and pkgIndex\&.tcl go together in $(libdir)/$(PACKAGE_NAME)$(PACKAGE_VERSION)\&.
+.TP
+\(bu
+Any public headers and stub client sources go in $(includedir); executable binaries go in $(bindir)\&.
+.TP
+\(bu
+Manpages go in $(mandir)/mann\&.
+.TP
+\(bu
+HTML documentation, its image/static resources, and LICENSE go in $(datadir)/$(PACKAGE_NAME)$(PACKAGE_VERSION)/doc\&.
+.PP
+Use --prefix, --libdir, --includedir, --datadir and --mandir at configure time to change these locations\&.
+All install and uninstall targets honor DESTDIR for staging:
+.PP
+.RS 4n
+.nf
+\&./configure --prefix=/your/prefix
+make
+make install DESTDIR=/your/staging/root
+make uninstall DESTDIR=/your/staging/root
+.fi
+.RE
+.PP
+make uninstall runs uninstall-binaries, uninstall-libraries and uninstall-doc\&. It removes the package-owned
+runtime directory, but removes only this package's named files from shared binary, include and documentation paths\&.
+Unrelated documentation files are retained; empty documentation directories are removed\&. Keep the configured build
+and source tree to uninstall the corresponding installation, and use the same path overrides for install and uninstall\&.
+.PP
+DOC_INSTALL_DIR can override the complete HTML destination\&. As in rbc-tk9, its default already includes DESTDIR;
+when overriding it explicitly, include the staging root yourself if needed\&.
+.SH "INSTALLATION ARCHIVES"
+.PP
+make dist follows rbc-tk9: it builds the package, stages make install under the build directory, and creates
+dist/$(PACKAGE_NAME)$(PACKAGE_VERSION)\&.tar\&.gz\&. make dist-zip creates the same payload as a ZIP file as well\&.
+make dist-clean removes this package's staging directory and both archives\&.
+.PP
+.RS 4n
+.nf
+make -j4 dist
+make dist-zip
+.fi
+.RE
+.PP
+These are platform-specific installation archives, not source distributions\&. Their contents are relative to the
+configured installation prefix: normally lib/, include/, and share/, without an enclosing package directory\&.
+Extract or merge the archive contents into the desired prefix\&. The payload uses the same install targets as normal
+installation, including the built library, Tcl runtime files, public headers, manpages, HTML resources and license\&.
+Tests, build files and examples that are not installed by make install are not included\&.
+.PP
+Configured installation directories must be below prefix; dist reports an error if one is outside it\&.
+When using --with-tcl and a custom prefix, set --exec-prefix to the same prefix if TEA would otherwise inherit
+Tcl's execution prefix, for example sh \&./configure --prefix=/opt/mypackages --exec-prefix=/opt/mypackages\&. Custom
+subdirectories inside that prefix are preserved\&. DESTDIR is not included in archive paths\&. The staging install does
+not write to the configured system prefix\&. DIST_ROOT and DIST_NAME may be overridden to choose the archive output
+directory and name; DIST_NAME must be a single directory name\&. Run dist-clean separately, not alongside dist
+or dist-zip in the same parallel make invocation\&.
+.SH "MEMORY REGRESSION TESTS"
+.PP
+Run make test with an ordinary Tcl build for the functional tests\&. The
+test/whenMemory\&.test tests call the native measurement command directly to
+check result lifetime and error handling independently of argparse\&. Live
+allocation checks additionally require Tcl built with --enable-symbols=mem;
+these checks are automatically skipped on ordinary Tcl builds\&. They cover all
+six WHEN/FIND/DERIV modes and early, partial-result and no-match errors\&.
 .SH ::TCLMEASURE
 .SH COMMANDS
 .PP

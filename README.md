@@ -31,7 +31,7 @@ There are prebuilt packages that contains .so/.dll files, tcl code and tests for
 ## Optional direct RBC vector input
 
 The default build supports Tcl lists and does not need RBC headers or libraries. To enable direct real-vector
-input from [rbc-tk9](https://github.com/georgtree/rbc-tk9), build with Tcl 9 and the current RBC 0.8.0 API:
+input from [rbc-tk9](https://github.com/georgtree/rbc-tk9), build with Tcl 9 and the current RBC 0.8.1 API:
 
 ```bash
 ./configure --with-tcl=/path/to/tcl/lib --with-rbc=/path/to/rbc-tk9

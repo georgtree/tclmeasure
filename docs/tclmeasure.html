@@ -73,7 +73,7 @@ steps are identical if you run it from UCRT64 shell.</p>
 <section id="optional-direct-rbc-vector-input">
 <span id="r-optional-direct-rbc-vector-input"></span><span id="r-optional20direct20rbc20vector20input"></span><h2>Optional direct RBC vector input<a class="headerlink" href="#optional-direct-rbc-vector-input" title="Link to this heading">¶</a></h2>
 <p>The default build supports Tcl lists and does not need RBC headers or libraries. To enable direct real-vector
-input from <a class="reference external" href="https://github.com/georgtree/rbc-tk9">rbc-tk9</a>, build with Tcl 9 and the current RBC 0.5.0 API:</p>
+input from <a class="reference external" href="https://github.com/georgtree/rbc-tk9">rbc-tk9</a>, build with Tcl 9 and the current RBC 0.8.1 API:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./configure<span class="w"> </span>--with-tcl<span class="o">=</span>/path/to/tcl/lib<span class="w"> </span>--with-rbc<span class="o">=</span>/path/to/rbc-tk9
 make
 </pre></div>
@@ -82,6 +82,8 @@ make
 <code class="docutils literal notranslate"><span class="pre">rbcDecls.h</span></code> and <code class="docutils literal notranslate"><span class="pre">rbcStubLib.c</span></code>. The supplied stub client source is compiled into tclmeasure; the RBC shared
 library is not linked into tclmeasure. Use matching RBC headers and runtime. <code class="docutils literal notranslate"><span class="pre">--without-rbc</span></code> explicitly selects
 the default list-only build. Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code> when changing this option in an existing build directory.</p>
+<p>Read-only RBC vectors are accepted as inputs; tclmeasure never writes vector storage or changes the lock.
+No new read-only stubs are required, so the existing RBC runtime requirement is unchanged.</p>
 <p>Even an RBC-enabled build can load and process lists without RBC installed. The <code class="docutils literal notranslate"><span class="pre">rbc::vector</span></code> package is loaded
 only when vector input is requested. Tk initialization is not required for vector measurements; the installed
 RBC binary must still have its own system library dependencies available.</p>
@@ -123,9 +125,64 @@ events while reading it.</p>
 <span id="r-documentation"></span><h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h1>
 <p>You can find some documentation <a class="reference external" href="https://georgtree.github.io/tclmeasure">here</a>.
 Also on Linux you can open manpages installed after run of <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code>.</p>
+<section id="installation-layout-and-removal">
+<span id="r-installation-layout-and-removal"></span><span id="r-installation20layout20and20removal"></span><h2>Installation layout and removal<a class="headerlink" href="#installation-layout-and-removal" title="Link to this heading">¶</a></h2>
+<p>Installation follows the rbc-tk9 layout and honors the directories selected by <code class="docutils literal notranslate"><span class="pre">configure</span></code>:</p>
+<ul class="simple">
+<li><p>The package library, Tcl scripts and <code class="docutils literal notranslate"><span class="pre">pkgIndex.tcl</span></code> go together in <code class="docutils literal notranslate"><span class="pre">$(libdir)/$(PACKAGE_NAME)$(PACKAGE_VERSION)</span></code>.</p></li>
+<li><p>Any public headers and stub client sources go in <code class="docutils literal notranslate"><span class="pre">$(includedir)</span></code>; executable binaries go in <code class="docutils literal notranslate"><span class="pre">$(bindir)</span></code>.</p></li>
+<li><p>Manpages go in <code class="docutils literal notranslate"><span class="pre">$(mandir)/mann</span></code>.</p></li>
+<li><p>HTML documentation, its image/static resources, and <code class="docutils literal notranslate"><span class="pre">LICENSE</span></code> go in <code class="docutils literal notranslate"><span class="pre">$(datadir)/$(PACKAGE_NAME)$(PACKAGE_VERSION)/doc</span></code>.</p></li>
+</ul>
+<p>Use <code class="docutils literal notranslate"><span class="pre">--prefix</span></code>, <code class="docutils literal notranslate"><span class="pre">--libdir</span></code>, <code class="docutils literal notranslate"><span class="pre">--includedir</span></code>, <code class="docutils literal notranslate"><span class="pre">--datadir</span></code> and <code class="docutils literal notranslate"><span class="pre">--mandir</span></code> at configure time to change these locations.
+All install and uninstall targets honor <code class="docutils literal notranslate"><span class="pre">DESTDIR</span></code> for staging:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./configure<span class="w"> </span>--prefix<span class="o">=</span>/your/prefix
+make
+make<span class="w"> </span>install<span class="w"> </span><span class="nv">DESTDIR</span><span class="o">=</span>/your/staging/root
+make<span class="w"> </span>uninstall<span class="w"> </span><span class="nv">DESTDIR</span><span class="o">=</span>/your/staging/root
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">uninstall</span></code> runs <code class="docutils literal notranslate"><span class="pre">uninstall-binaries</span></code>, <code class="docutils literal notranslate"><span class="pre">uninstall-libraries</span></code> and <code class="docutils literal notranslate"><span class="pre">uninstall-doc</span></code>. It removes the package-owned
+runtime directory, but removes only this package’s named files from shared binary, include and documentation paths.
+Unrelated documentation files are retained; empty documentation directories are removed. Keep the configured build
+and source tree to uninstall the corresponding installation, and use the same path overrides for install and uninstall.</p>
+<p><code class="docutils literal notranslate"><span class="pre">DOC_INSTALL_DIR</span></code> can override the complete HTML destination. As in rbc-tk9, its default already includes <code class="docutils literal notranslate"><span class="pre">DESTDIR</span></code>;
+when overriding it explicitly, include the staging root yourself if needed.</p>
+</section>
+<section id="installation-archives">
+<span id="r-installation-archives"></span><span id="r-installation20archives"></span><h2>Installation archives<a class="headerlink" href="#installation-archives" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dist</span></code> follows rbc-tk9: it builds the package, stages <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code> under the build directory, and creates
+<code class="docutils literal notranslate"><span class="pre">dist/$(PACKAGE_NAME)$(PACKAGE_VERSION).tar.gz</span></code>. <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dist-zip</span></code> creates the same payload as a ZIP file as well.
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dist-clean</span></code> removes this package’s staging directory and both archives.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>-j4<span class="w"> </span>dist
+make<span class="w"> </span>dist-zip
+</pre></div>
+</div>
+<p>These are platform-specific installation archives, not source distributions. Their contents are relative to the
+configured installation prefix: normally <code class="docutils literal notranslate"><span class="pre">lib/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/</span></code>, and <code class="docutils literal notranslate"><span class="pre">share/</span></code>, without an enclosing package directory.
+Extract or merge the archive contents into the desired prefix. The payload uses the same install targets as normal
+installation, including the built library, Tcl runtime files, public headers, manpages, HTML resources and license.
+Tests, build files and examples that are not installed by <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code> are not included.</p>
+<p>Configured installation directories must be below <code class="docutils literal notranslate"><span class="pre">prefix</span></code>; <code class="docutils literal notranslate"><span class="pre">dist</span></code> reports an error if one is outside it.
+When using <code class="docutils literal notranslate"><span class="pre">--with-tcl</span></code> and a custom prefix, set <code class="docutils literal notranslate"><span class="pre">--exec-prefix</span></code> to the same prefix if TEA would otherwise inherit
+Tcl’s execution prefix, for example <code class="docutils literal notranslate"><span class="pre">sh</span> <span class="pre">./configure</span> <span class="pre">--prefix=/opt/mypackages</span> <span class="pre">--exec-prefix=/opt/mypackages</span></code>. Custom
+subdirectories inside that prefix are preserved. <code class="docutils literal notranslate"><span class="pre">DESTDIR</span></code> is not included in archive paths. The staging install does
+not write to the configured system prefix. <code class="docutils literal notranslate"><span class="pre">DIST_ROOT</span></code> and <code class="docutils literal notranslate"><span class="pre">DIST_NAME</span></code> may be overridden to choose the archive output
+directory and name; <code class="docutils literal notranslate"><span class="pre">DIST_NAME</span></code> must be a single directory name. Run <code class="docutils literal notranslate"><span class="pre">dist-clean</span></code> separately, not alongside <code class="docutils literal notranslate"><span class="pre">dist</span></code>
+or <code class="docutils literal notranslate"><span class="pre">dist-zip</span></code> in the same parallel make invocation.</p>
+</section>
+<section id="memory-regression-tests">
+<span id="r-memory-regression-tests"></span><span id="r-memory20regression20tests"></span><h2>Memory regression tests<a class="headerlink" href="#memory-regression-tests" title="Link to this heading">¶</a></h2>
+<p>Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code> with an ordinary Tcl build for the functional tests. The
+<code class="docutils literal notranslate"><span class="pre">test/whenMemory.test</span></code> tests call the native measurement command directly to
+check result lifetime and error handling independently of argparse. Live
+allocation checks additionally require Tcl built with <code class="docutils literal notranslate"><span class="pre">--enable-symbols=mem</span></code>;
+these checks are automatically skipped on ordinary Tcl builds. They cover all
+six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.</p>
 <hr class="docutils" />
 <p class="centered">
 <strong>Copyright (c) George Yashin</strong></p></section>
+</section>
 
 
             <div class="clearer"></div>
@@ -143,7 +200,12 @@ Also on Linux you can open manpages installed after run of <code class="docutils
 </ul>
 </li>
 <li><a class="reference internal" href="#supported-platforms">Supported platforms</a></li>
-<li><a class="reference internal" href="#documentation">Documentation</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a><ul>
+<li><a class="reference internal" href="#installation-layout-and-removal">Installation layout and removal</a></li>
+<li><a class="reference internal" href="#installation-archives">Installation archives</a></li>
+<li><a class="reference internal" href="#memory-regression-tests">Memory regression tests</a></li>
+</ul>
+</li>
 </ul>
 
   </div>
