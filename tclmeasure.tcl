@@ -242,7 +242,7 @@ proc ::tclmeasure::MeasureHelp {arguments} {
         set definition [ConditionDefinition $kind]
     }
     puts "Usage: $synopsis"
-    argparse -inline -helplevel 0 -help $detail $definition {-help}
+    argparse -inline -helplevel 1 -help $detail $definition {-help}
     return 1
 }
 
@@ -437,11 +437,11 @@ proc ::tclmeasure::measure {args} {
     if {[MeasureHelp $args]} {
         return
     }
-    argparse -helplevel 1 -help {Does different measurements of input data lists. This procedure imitates the .meas\
-                                         command from SPICE3 and Ngspice in particular. It has mutiple modes, and each\
-                                         mod could have different forms: Trigger-Target, Find-When, Deriv-When,\
-                                         Find-At, Deriv-At, Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between and Integ. See\
-                                         documentation for further details} [MeasureDefinition]
+    argparse -help {Does different measurements of input data lists. This procedure imitates the .meas command from\
+                            SPICE3 and Ngspice in particular. It has mutiple modes, and each mod could have different\
+                            forms: Trigger-Target, Find-When, Deriv-When, Find-At, Deriv-At,\
+                            Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between and Integ. See documentation for further details}\
+                            [MeasureDefinition]
     set vectors [expr {![info exists data]}]
     set suffix {}
     if {$vectors} {
