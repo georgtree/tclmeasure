@@ -1,0 +1,66 @@
+package require tcltest
+namespace import ::tcltest::*
+package require tclmeasure
+
+foreach {selectors expected} {
+    {-avg} {*-vec*-from*-to*}
+    {-rms} {*-vec*-from*-to*}
+    {-min} {*-vec*-from*-to*}
+    {-max} {*-vec*-from*-to*}
+    {-pp} {*-vec*-from*-to*}
+    {-minat} {*-vec*-from*-to*}
+    {-maxat} {*-vec*-from*-to*}
+    {-between} {*-vec*-from*-to*}
+    {-integ} {*-vec*-from*-to*-cum*}
+    {-trig -targ} {*-trig*-targ*-at*-vec*-rise*-fall*}
+    {-targ -trig} {*-trig*-targ*-at*-vec*-rise*-fall*}
+    {-trig} {*-trig*-targ*-rise*}
+    {-targ} {*-trig*-targ*-rise*}
+    {-when} {*-when*-vec1*-vec2*-cross*}
+    {-find -when} {*-find signal -when*-vec1*-cross*}
+    {-deriv -when} {*-deriv signal -when*-vec1*-cross*}
+    {-find -at} {*-find signal -at x*-find*-at*}
+    {-deriv -at} {*-deriv signal -at x*-at*-deriv*}
+    {-av} {*-avg*-vec*-from*-to*}
+    {-tr -ta} {*-trig*-targ*-rise*}
+} {
+    test help-mode-$selectors {mode help needs no data or native vector support and returns normally} -body {
+        set before [package provide rbc::vector]
+        set value [::tclmeasure::measure {*}$selectors -help]
+        list $value [expr {$before eq [package provide rbc::vector]}]
+    } -match glob -output $expected -result {{} 1}
+}
+
+test help-general {general help returns without required xname} -body {
+    set result [::tclmeasure::measure -help]
+    list $result continued
+} -match glob -output {*-xname*-trig*-avg*} -result {{} continued}
+
+test help-position {help may precede selectors; short help alias works} -body {
+    set result [::tclmeasure::measure -h -avg]
+    list $result continued
+} -match glob -output {*-avg*-vec*} -result {{} continued}
+
+test help-invalid-combination {incompatible selectors do not silently choose a mode} -body {
+    ::tclmeasure::measure -avg -trig -help
+} -returnCodes error -match glob -result {invalid measurement help combination:*}
+
+test help-bare-selector {without help, ordinary missing argument errors remain} -body {
+    list [catch {::tclmeasure::measure -avg}] [catch {::tclmeasure::measure -trig -targ}]
+} -result {1 1}
+
+test help-input-is-not-selector {actual argument values do not select contextual help} -body {
+    ::tclmeasure::measure -xname x -avg {-vec y} -help
+} -match glob -output {*-xname*-trig*-avg*} -result {}
+
+test help-no-native-access {help works even if data access and vector support would fail} -setup {
+    rename ::tclmeasure::InputData ::tclmeasure::SavedInputData
+    proc ::tclmeasure::InputData args {error {unexpected data access}}
+} -body {
+    ::tclmeasure::measure -avg -help
+} -cleanup {
+    rename ::tclmeasure::InputData {}
+    rename ::tclmeasure::SavedInputData ::tclmeasure::InputData
+} -match glob -output {*-avg*-vec*} -result {}
+
+cleanupTests

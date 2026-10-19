@@ -173,12 +173,25 @@ or <code class="docutils literal notranslate"><span class="pre">dist-zip</span><
 </section>
 <section id="memory-regression-tests">
 <span id="r-memory-regression-tests"></span><span id="r-memory20regression20tests"></span><h2>Memory regression tests<a class="headerlink" href="#memory-regression-tests" title="Link to this heading">¶</a></h2>
-<p>Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code> with an ordinary Tcl build for the functional tests. The
-<code class="docutils literal notranslate"><span class="pre">test/whenMemory.test</span></code> tests call the native measurement command directly to
-check result lifetime and error handling independently of argparse. Live
-allocation checks additionally require Tcl built with <code class="docutils literal notranslate"><span class="pre">--enable-symbols=mem</span></code>;
-these checks are automatically skipped on ordinary Tcl builds. They cover all
-six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.</p>
+<p>Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code> with an ordinary Tcl build for the functional tests. The <code class="docutils literal notranslate"><span class="pre">test/whenMemory.test</span></code> tests call the native
+measurement command directly to check result lifetime and error handling independently of argparse. Live allocation
+checks additionally require Tcl built with <code class="docutils literal notranslate"><span class="pre">--enable-symbols=mem</span></code>; these checks are automatically skipped on ordinary
+Tcl builds. They cover all six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.</p>
+</section>
+<section id="interactive-measurement-help">
+<span id="r-interactive-measurement-help"></span><span id="r-interactive20measurement20help"></span><h2>Interactive measurement help<a class="headerlink" href="#interactive-measurement-help" title="Link to this heading">¶</a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-help</span></code> for general options. Add measurement selectors to see the options for that mode:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>avg<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>find<span class="w"> </span><span class="o">-</span>when<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>deriv<span class="w"> </span><span class="o">-</span>at<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>integ<span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<p>Mode help requires no <code class="docutils literal notranslate"><span class="pre">-xname</span></code>, data dictionary, or RBC package. It accepts selectors in either order and unambiguous
+prefixes, such as <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-tr</span> <span class="pre">-ta</span> <span class="pre">-help</span></code>. <code class="docutils literal notranslate"><span class="pre">-h</span></code> also requests help.  Use selector-only calls for contextual help; calls
+containing actual option values retain general help.  Incompatible selector combinations are errors. Without <code class="docutils literal notranslate"><span class="pre">-help</span></code>,
+bare selectors still require their normal values.</p>
 <hr class="docutils" />
 <p class="centered">
 <strong>Copyright (c) George Yashin</strong></p></section>
@@ -204,6 +217,7 @@ six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.</p>
 <li><a class="reference internal" href="#installation-layout-and-removal">Installation layout and removal</a></li>
 <li><a class="reference internal" href="#installation-archives">Installation archives</a></li>
 <li><a class="reference internal" href="#memory-regression-tests">Memory regression tests</a></li>
+<li><a class="reference internal" href="#interactive-measurement-help">Interactive measurement help</a></li>
 </ul>
 </li>
 </ul>

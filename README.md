@@ -147,9 +147,24 @@ or `dist-zip` in the same parallel make invocation.
 
 ## Memory regression tests
 
-Run `make test` with an ordinary Tcl build for the functional tests. The
-`test/whenMemory.test` tests call the native measurement command directly to
-check result lifetime and error handling independently of argparse. Live
-allocation checks additionally require Tcl built with `--enable-symbols=mem`;
-these checks are automatically skipped on ordinary Tcl builds. They cover all
-six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.
+Run `make test` with an ordinary Tcl build for the functional tests. The `test/whenMemory.test` tests call the native
+measurement command directly to check result lifetime and error handling independently of argparse. Live allocation
+checks additionally require Tcl built with `--enable-symbols=mem`; these checks are automatically skipped on ordinary
+Tcl builds. They cover all six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.
+
+## Interactive measurement help
+
+Use `measure -help` for general options. Add measurement selectors to see the options for that mode:
+
+```tcl
+measure -avg -help
+measure -trig -targ -help
+measure -find -when -help
+measure -deriv -at -help
+measure -integ -help
+```
+
+Mode help requires no `-xname`, data dictionary, or RBC package. It accepts selectors in either order and unambiguous
+prefixes, such as `measure -tr -ta -help`. `-h` also requests help.  Use selector-only calls for contextual help; calls
+containing actual option values retain general help.  Incompatible selector combinations are errors. Without `-help`,
+bare selectors still require their normal values.

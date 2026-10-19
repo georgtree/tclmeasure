@@ -156,8 +156,8 @@ vector point is when y2 crosses value 0.5, fifth fall.</p>
 <div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.7</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">2</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-at</span><span class="w"> </span><span class="mf">20.0</span><span class="k">}</span>
 </pre></div>
 </div>
-<p>Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.7, second rise, and target point
-is value 20.0 at x axis.</p>
+<p>Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.7, second rise, and target
+point is value 20.0 at x axis.</p>
 <p>In this mode procedure returns dictionary with keys <code class="docutils literal notranslate"><span class="pre">xtrig</span></code>, <code class="docutils literal notranslate"><span class="pre">xtarg</span></code>, <code class="docutils literal notranslate"><span class="pre">xdelta</span></code> and corresponding values.</p>
 <p class="rubric"><strong>Find-When</strong> or <strong>Deriv-When</strong></p>
 <p>In this mode it measures any vector (or its derivative), when two signals cross each other or a signal crosses
@@ -285,6 +285,12 @@ Examples of usages:</p>
 <div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>x<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>x<span class="w"> </span><span class="nv">$x</span><span class="w"> </span>y1<span class="w"> </span><span class="nv">$y1</span><span class="w"> </span>y2<span class="w"> </span><span class="nv">$y2</span><span class="k">]</span><span class="w"> </span><span class="o">-</span>avg<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>y1<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">5</span><span class="k">}</span>
 </pre></div>
 </div>
+<p>Interactive help:
+Use <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-help</span></code> for general options, or select a mode before -help:
+<code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-avg</span> <span class="pre">-help</span></code>, <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-trig</span> <span class="pre">-targ</span> <span class="pre">-help</span></code>, <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-find</span> <span class="pre">-when</span> <span class="pre">-help</span></code>,
+<code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-deriv</span> <span class="pre">-at</span> <span class="pre">-help</span></code>, or <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-when</span> <span class="pre">-help</span></code>.
+Mode help accepts unambiguous selector prefixes and needs no input data or RBC support.
+Bare selectors without -help remain measurement calls and require their normal arguments.</p>
 <hr class="docutils" />
 <p class="centered">
 <strong>Copyright (c) George Yashin</strong></p></section>

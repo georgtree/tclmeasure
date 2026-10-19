@@ -194,12 +194,28 @@ directory and name; DIST_NAME must be a single directory name\&. Run dist-clean 
 or dist-zip in the same parallel make invocation\&.
 .SH "MEMORY REGRESSION TESTS"
 .PP
-Run make test with an ordinary Tcl build for the functional tests\&. The
-test/whenMemory\&.test tests call the native measurement command directly to
-check result lifetime and error handling independently of argparse\&. Live
-allocation checks additionally require Tcl built with --enable-symbols=mem;
-these checks are automatically skipped on ordinary Tcl builds\&. They cover all
-six WHEN/FIND/DERIV modes and early, partial-result and no-match errors\&.
+Run make test with an ordinary Tcl build for the functional tests\&. The test/whenMemory\&.test tests call the native
+measurement command directly to check result lifetime and error handling independently of argparse\&. Live allocation
+checks additionally require Tcl built with --enable-symbols=mem; these checks are automatically skipped on ordinary
+Tcl builds\&. They cover all six WHEN/FIND/DERIV modes and early, partial-result and no-match errors\&.
+.SH "INTERACTIVE MEASUREMENT HELP"
+.PP
+Use measure -help for general options\&. Add measurement selectors to see the options for that mode:
+.PP
+.RS 4n
+.nf
+measure -avg -help
+measure -trig -targ -help
+measure -find -when -help
+measure -deriv -at -help
+measure -integ -help
+.fi
+.RE
+.PP
+Mode help requires no -xname, data dictionary, or RBC package\&. It accepts selectors in either order and unambiguous
+prefixes, such as measure -tr -ta -help\&. -h also requests help\&.  Use selector-only calls for contextual help; calls
+containing actual option values retain general help\&.  Incompatible selector combinations are errors\&. Without -help,
+bare selectors still require their normal values\&.
 .SH ::TCLMEASURE
 .SH COMMANDS
 .PP
@@ -347,8 +363,8 @@ measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.
 .fi
 .RE
 .PP
-Here we use x key value as x axis, trigger vector point is when y1 crosses value 0\&.7, second rise, and target point
-is value 20\&.0 at x axis\&.
+Here we use x key value as x axis, trigger vector point is when y1 crosses value 0\&.7, second rise, and target
+point is value 20\&.0 at x axis\&.
 .PP
 In this mode procedure returns dictionary with keys xtrig, xtarg, xdelta and corresponding values\&.
 .PP
@@ -518,4 +534,11 @@ Examples of usages:
 measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
 .fi
 .RE
+.PP
+Interactive help:
+Use measure -help for general options, or select a mode before -help:
+measure -avg -help, measure -trig -targ -help, measure -find -when -help,
+measure -deriv -at -help, or measure -when -help\&.
+Mode help accepts unambiguous selector prefixes and needs no input data or RBC support\&.
+Bare selectors without -help remain measurement calls and require their normal arguments\&.
 
