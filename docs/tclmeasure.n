@@ -350,7 +350,7 @@ Examples of usages:
 .PP
 .RS 4n
 .nf
-measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} -targ {-vec y2 -val 0\&.5 -fall 5}
+measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0\&.1 -rise 3} #                                -targ {-vec y2 -val 0\&.5 -fall 5}
 .fi
 .RE
 .PP

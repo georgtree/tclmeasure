@@ -300,7 +300,8 @@ proc ::tclmeasure::measure {args} {
     #
     # Examples of usages:
     # ```tcl
-    # measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3} -targ {-vec y2 -val 0.5 -fall 5}
+    # measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -trig {-vec y1 -val 0.1 -rise 3}\
+    #                                -targ {-vec y2 -val 0.5 -fall 5}
     # ```
     # Here we use x key value as x axis, trigger vector point is when y1 crosses value 0.1, third rise, and target 
     # vector point is when y2 crosses value 0.5, fifth fall.
