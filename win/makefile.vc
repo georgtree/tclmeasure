@@ -37,7 +37,9 @@ DIST_DOC = $(STAGE)\share\$(DIST_NAME)\doc
 
 dist-zip: $(PROJECT)
 	@if exist "$(STAGE)" rmdir /s /q "$(STAGE)"
-	@mkdir "$(DIST_LIB)" "$(DIST_DOC)" "$(STAGE)\share\man\mann"
+	@cmd.exe /d /e:on /c mkdir "$(DIST_LIB)"
+	@cmd.exe /d /e:on /c mkdir "$(DIST_DOC)"
+	@cmd.exe /d /e:on /c mkdir "$(STAGE)\share\man\mann"
 	@$(COPY) "$(PRJLIB)" "$(DIST_LIB)\"
 	@$(COPY) "$(OUT_DIR)\pkgIndex.tcl" "$(DIST_LIB)\"
 	@$(COPY) "$(ROOT)\tclmeasure.tcl" "$(DIST_LIB)\"
