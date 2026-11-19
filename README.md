@@ -1,5 +1,7 @@
 # Content
 
+[![Tests: Linux, Windows UCRT64 and MSVC](https://img.shields.io/github/actions/workflow/status/georgtree/tclmeasure/tests.yml?branch=main&label=Tests%3A%20Linux%2C%20Windows%20UCRT64%20and%20MSVC)](https://github.com/georgtree/tclmeasure/actions/workflows/tests.yml)
+
 - [Emulation of measure command in SPICE](https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html)
 
 # Installation and dependencies
