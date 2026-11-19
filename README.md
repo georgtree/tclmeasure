@@ -27,6 +27,41 @@ steps are identical if you run it from UCRT64 shell.
 
 There are prebuilt packages that contains .so/.dll files, tcl code and tests for Windows and Linux.
 
+## Continuous integration and binary packages
+
+Pushes build and test tclmeasure with direct RBC vector support on Linux GCC, Windows UCRT64 and Windows MSVC (x64),
+using Tcl 9.1.0. Each workflow resolves the `latest` release of both
+[RBC](https://github.com/georgtree/rbc-tk9/releases/tag/latest) and
+[argparse](https://github.com/georgtree/argparse/releases/tag/latest) once for all three jobs. Each runner uses the
+native RBC archive and the standalone argparse archive for its toolchain. The cache tracks the tag target, asset ID and
+SHA-256 for each archive separately. Each download is verified before use.
+
+Run **Actions → Build packages → Run workflow** to publish all three tested archives and their checksums to the [rolling
+release](https://github.com/georgtree/tclmeasure/releases/tag/latest). Tcl, RBC, argparse and Tcllib are supplied
+separately.
+
+For a local MSVC build, use an **x64 Native Tools Command Prompt for Visual Studio 2022**, a matching Tcl 9.1
+installation with headers and stub library, and the extracted native MSVC RBC distribution. The repository bundles the
+Tcl Nmake rules and helper under `win/`, so Tcl installations without `lib/nmake` are supported.
+
+```bat
+cd win
+set "INSTALLDIR=C:\Tcl91"
+set "RBC_DIR=C:\deps\rbc"
+set "PATH=%INSTALLDIR%\bin;%PATH%"
+nmake /f makefile.vc
+```
+
+To run the tests with separately extracted dependencies, set `TCLLIBPATH` to a Tcl list of their directories.
+For example, with argparse 0.70, RBC 0.8.5, and a Tcllib source checkout:
+
+```bat
+set "TCLLIBPATH={C:/deps/argparse/lib/argparse0.70} {C:/deps/rbc/lib/rbc0.8.5} {C:/deps/tcllib/modules}"
+nmake /f makefile.vc test
+```
+
+The test target adds the build directory to the package search path. Use `nmake /f makefile.vc install` to install
+the extension into the Tcl prefix, or `nmake /f makefile.vc dist-zip` to produce a distribution.
 
 ## Optional direct RBC vector input
 
@@ -90,8 +125,8 @@ Any OS that has tcl9.0 (Linux, Windows, FreeBSD).
 
 # Documentation
 
-You can find some documentation [here](https://georgtree.github.io/tclmeasure).
-Also on Linux you can open manpages installed after run of `make install`.
+You can find some documentation [here](https://georgtree.github.io/tclmeasure). Also on Linux you can open manpages
+installed after run of `make install`.
 
 ## Installation layout and removal
 
@@ -131,11 +166,11 @@ make -j4 dist
 make dist-zip
 ```
 
-These are platform-specific installation archives, not source distributions. Their contents are relative to the
-configured installation prefix: normally `lib/`, `include/`, and `share/`, without an enclosing package directory.
-Extract or merge the archive contents into the desired prefix. The payload uses the same install targets as normal
-installation, including the built library, Tcl runtime files, public headers, manpages, HTML resources and license.
-Tests, build files and examples that are not installed by `make install` are not included.
+These are platform-specific installation archives. Their contents are relative to the configured installation prefix:
+normally `lib/`, `include/`, and `share/`, without an enclosing package directory.  Extract or merge the archive
+contents into the desired prefix. The payload uses the same install targets as normal installation, including the built
+library, Tcl runtime files, public headers, manpages, HTML resources and license.  Tests, build files and examples that
+are not installed by `make install` are not included.
 
 Configured installation directories must be below `prefix`; `dist` reports an error if one is outside it.
 When using `--with-tcl` and a custom prefix, set `--exec-prefix` to the same prefix if TEA would otherwise inherit

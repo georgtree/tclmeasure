@@ -47,6 +47,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Content</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#installation-and-dependencies">Installation and dependencies</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#continuous-integration-and-binary-packages">Continuous integration and binary packages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#optional-direct-rbc-vector-input">Optional direct RBC vector input</a></li>
 </ul>
 </li>
@@ -122,6 +123,36 @@ flag to configure script.</p>
 <p>For Windows build it is strongly recommended to use <a class="reference external" href="https://www.msys2.org/">MSYS64 UCRT64 environment</a>, the above
 steps are identical if you run it from UCRT64 shell.</p>
 <p>There are prebuilt packages that contains .so/.dll files, tcl code and tests for Windows and Linux.</p>
+<section id="continuous-integration-and-binary-packages">
+<span id="r-continuous-integration-and-binary-packages"></span><span id="r-continuous20integration20and20binary20packages"></span><h2>Continuous integration and binary packages<a class="headerlink" href="#continuous-integration-and-binary-packages" title="Link to this heading"></a></h2>
+<p>Pushes build and test tclmeasure with direct RBC vector support on Linux GCC, Windows UCRT64 and Windows MSVC (x64),
+using Tcl 9.1.0. Each workflow resolves the <code class="docutils literal notranslate"><span class="pre">latest</span></code> release of both
+<a class="reference external" href="https://github.com/georgtree/rbc-tk9/releases/tag/latest">RBC</a> and
+<a class="reference external" href="https://github.com/georgtree/argparse/releases/tag/latest">argparse</a> once for all three jobs. Each runner uses the
+native RBC archive and the standalone argparse archive for its toolchain. The cache tracks the tag target, asset ID and
+SHA-256 for each archive separately. Each download is verified before use.</p>
+<p>Run <strong>Actions → Build packages → Run workflow</strong> to publish all three tested archives and their checksums to the <a class="reference external" href="https://github.com/georgtree/tclmeasure/releases/tag/latest">rolling
+release</a>. Tcl, RBC, argparse and Tcllib are supplied
+separately.</p>
+<p>For a local MSVC build, use an <strong>x64 Native Tools Command Prompt for Visual Studio 2022</strong>, a matching Tcl 9.1
+installation with headers and stub library, and the extracted native MSVC RBC distribution. The repository bundles the
+Tcl Nmake rules and helper under <code class="docutils literal notranslate"><span class="pre">win/</span></code>, so Tcl installations without <code class="docutils literal notranslate"><span class="pre">lib/nmake</span></code> are supported.</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span><span class="k">cd</span> win
+<span class="k">set</span> <span class="s2">"INSTALLDIR=C:\Tcl91"</span>
+<span class="k">set</span> <span class="s2">"RBC_DIR=C:\deps\rbc"</span>
+<span class="k">set</span> <span class="s2">"PATH=</span><span class="nv">%INSTALLDIR%</span><span class="s2">\bin;</span><span class="nv">%PATH%</span><span class="s2">"</span>
+nmake /f makefile.vc
+</pre></div>
+</div>
+<p>To run the tests with separately extracted dependencies, set <code class="docutils literal notranslate"><span class="pre">TCLLIBPATH</span></code> to a Tcl list of their directories.
+For example, with argparse 0.70, RBC 0.8.5, and a Tcllib source checkout:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span><span class="k">set</span> <span class="s2">"TCLLIBPATH={C:/deps/argparse/lib/argparse0.70} {C:/deps/rbc/lib/rbc0.8.5} {C:/deps/tcllib/modules}"</span>
+nmake /f makefile.vc test
+</pre></div>
+</div>
+<p>The test target adds the build directory to the package search path. Use <code class="docutils literal notranslate"><span class="pre">nmake</span> <span class="pre">/f</span> <span class="pre">makefile.vc</span> <span class="pre">install</span></code> to install
+the extension into the Tcl prefix, or <code class="docutils literal notranslate"><span class="pre">nmake</span> <span class="pre">/f</span> <span class="pre">makefile.vc</span> <span class="pre">dist-zip</span></code> to produce a distribution.</p>
+</section>
 <section id="optional-direct-rbc-vector-input">
 <span id="r-optional-direct-rbc-vector-input"></span><span id="r-optional20direct20rbc20vector20input"></span><h2>Optional direct RBC vector input<a class="headerlink" href="#optional-direct-rbc-vector-input" title="Link to this heading"></a></h2>
 <p>The default build supports Tcl lists and does not need RBC headers or libraries. To enable direct real-vector
@@ -175,8 +206,8 @@ events while reading it.</p>
 </section>
 <section id="documentation">
 <span id="r-documentation"></span><h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h1>
-<p>You can find some documentation <a class="reference external" href="https://georgtree.github.io/tclmeasure">here</a>.
-Also on Linux you can open manpages installed after run of <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code>.</p>
+<p>You can find some documentation <a class="reference external" href="https://georgtree.github.io/tclmeasure">here</a>. Also on Linux you can open manpages
+installed after run of <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code>.</p>
 <section id="installation-layout-and-removal">
 <span id="r-installation-layout-and-removal"></span><span id="r-installation20layout20and20removal"></span><h2>Installation layout and removal<a class="headerlink" href="#installation-layout-and-removal" title="Link to this heading"></a></h2>
 <p>Installation follows the rbc-tk9 layout and honors the directories selected by <code class="docutils literal notranslate"><span class="pre">configure</span></code>:</p>
@@ -210,11 +241,11 @@ when overriding it explicitly, include the staging root yourself if needed.</p>
 make<span class="w"> </span>dist-zip
 </pre></div>
 </div>
-<p>These are platform-specific installation archives, not source distributions. Their contents are relative to the
-configured installation prefix: normally <code class="docutils literal notranslate"><span class="pre">lib/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/</span></code>, and <code class="docutils literal notranslate"><span class="pre">share/</span></code>, without an enclosing package directory.
-Extract or merge the archive contents into the desired prefix. The payload uses the same install targets as normal
-installation, including the built library, Tcl runtime files, public headers, manpages, HTML resources and license.
-Tests, build files and examples that are not installed by <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code> are not included.</p>
+<p>These are platform-specific installation archives. Their contents are relative to the configured installation prefix:
+normally <code class="docutils literal notranslate"><span class="pre">lib/</span></code>, <code class="docutils literal notranslate"><span class="pre">include/</span></code>, and <code class="docutils literal notranslate"><span class="pre">share/</span></code>, without an enclosing package directory.  Extract or merge the archive
+contents into the desired prefix. The payload uses the same install targets as normal installation, including the built
+library, Tcl runtime files, public headers, manpages, HTML resources and license.  Tests, build files and examples that
+are not installed by <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install</span></code> are not included.</p>
 <p>Configured installation directories must be below <code class="docutils literal notranslate"><span class="pre">prefix</span></code>; <code class="docutils literal notranslate"><span class="pre">dist</span></code> reports an error if one is outside it.
 When using <code class="docutils literal notranslate"><span class="pre">--with-tcl</span></code> and a custom prefix, set <code class="docutils literal notranslate"><span class="pre">--exec-prefix</span></code> to the same prefix if TEA would otherwise inherit
 Tcl’s execution prefix, for example <code class="docutils literal notranslate"><span class="pre">sh</span> <span class="pre">./configure</span> <span class="pre">--prefix=/opt/mypackages</span> <span class="pre">--exec-prefix=/opt/mypackages</span></code>. Custom
