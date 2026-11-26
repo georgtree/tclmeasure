@@ -20,7 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Content" href="tclmeasure.html" /> 
+    <link rel="prev" title="Overview" href="tclmeasure.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -44,7 +44,7 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html">Content</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tclmeasure.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#installation-and-dependencies">Installation and dependencies</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#continuous-integration-and-binary-packages">Continuous integration and binary packages</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#optional-rbc-vector-support">Optional RBC vector support</a></li>
@@ -52,17 +52,19 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#supported-platforms">Supported platforms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#documentation">Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#vector-output-and-package-defaults">Vector output and package defaults</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-layout-and-removal">Installation layout and removal</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-archives">Installation archives</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#memory-regression-tests">Memory regression tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#interactive-measurement-help">Interactive measurement help</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="tclmeasure.html#flat-measurement-clauses-and-interactive-help">Flat measurement clauses and interactive help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#testing">Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tclmeasure.html#memory-regression-tests">Memory regression tests</a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">::tclmeasure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#vector-input">Vector input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#vector-output-and-package-defaults">Vector output and package defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interactive-measurement-help">Interactive measurement help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#flat-measurement-clauses">Flat measurement clauses</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#configure"><code class="docutils literal notranslate"><span class="pre">configure</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#measure"><code class="docutils literal notranslate"><span class="pre">measure</span></code></a></li>
@@ -99,6 +101,135 @@
              
   <section id="tclmeasure">
 <span id="r-tclmeasure"></span><span id="r-3a3atclmeasure"></span><h1>::tclmeasure<a class="headerlink" href="#tclmeasure" title="Link to this heading"></a></h1>
+<section id="vector-input">
+<span id="r-tclmeasure-vector-input"></span><span id="r-3a3atclmeasureqzvector20input"></span><h2>Vector input<a class="headerlink" href="#vector-input" title="Link to this heading"></a></h2>
+<p>Read-only RBC vectors are accepted as inputs. Output replacement requires writable real vectors;
+tclmeasure never unlocks a vector. Use RBC 0.8.1 or newer headers and runtime.</p>
+<p>Even an RBC-enabled build can load and process lists without RBC installed. The <code class="docutils literal notranslate"><span class="pre">rbc::vector</span></code> package is loaded
+only when vector input or output is requested (including configuring a vector output default). Tk
+initialization is not required for vector measurements; the installed RBC binary must still have its own system
+library dependencies available.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">-data</span></code>, measurement inputs are lists looked up in that dictionary, as before. Omit <code class="docutils literal notranslate"><span class="pre">-data</span></code> to interpret
+<code class="docutils literal notranslate"><span class="pre">-xname</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec1</span></code>, <code class="docutils literal notranslate"><span class="pre">-vec2</span></code>, <code class="docutils literal notranslate"><span class="pre">-find</span></code> and <code class="docutils literal notranslate"><span class="pre">-deriv</span></code> as RBC vector command names:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>tclmeasure
+<span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>rbc::vector
+<span class="nv">rbc</span><span class="o">::</span>vector<span class="w"> </span>create<span class="w"> </span>time<span class="w"> </span>signal
+<span class="nb">time</span><span class="w"> </span>set<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="k">}</span>
+<span class="nv">signal</span><span class="w"> </span>set<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">6</span><span class="k">}</span>
+<span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>measure<span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-at</span><span class="w"> </span><span class="mf">0.5</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>signal<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+<span class="c"># -&gt; xtrig 0.5 xtarg 1.5 xdelta 1.0</span>
+</pre></div>
+</div>
+<p>All measurement modes accept vectors. Names are resolved in the namespace of the caller of <code class="docutils literal notranslate"><span class="pre">measure</span></code>, with
+normal Tcl command lookup; fully qualified names also work. Use the vector’s actual command name, not a Tcl
+alias or an imported command with a different name. Mapped array variables are not needed. Only real vectors
+are supported, with equal sample counts and strictly increasing X values. External vector index offsets do
+not affect sample alignment. Supply at least two samples, or three for derivative measurements.</p>
+<p>The wrapper passes names directly to C; it does not extract the full vectors as lists. A shared read-only
+accessor serves both input types. RMS squares samples while reading, before interpolation, matching the list
+implementation without creating a temporary vector. Returned values retain their existing forms by default.
+<code class="docutils literal notranslate"><span class="pre">-between</span></code> and cumulative integration additionally support vector output; <code class="docutils literal notranslate"><span class="pre">-cross</span> <span class="pre">all</span></code> and scalar measurements
+retain their existing result types. Interpolation and measurement semantics are unchanged.</p>
+<p>The internal C commands retain their original list signatures. Their <code class="docutils literal notranslate"><span class="pre">Vectors</span></code> counterparts use the same
+arguments with vector names in the data positions; unused <code class="docutils literal notranslate"><span class="pre">FindDerivWhenVectors</span></code> inputs remain empty strings.
+<code class="docutils literal notranslate"><span class="pre">RmsVectors</span></code> uses the <code class="docutils literal notranslate"><span class="pre">IntegVectors</span></code> signature with the final cumulative flag set to false. These commands
+initialize stubs in the current interpreter before borrowing sample storage and do not evaluate Tcl or process
+events while reading it.</p>
+</section>
+<section id="vector-output-and-package-defaults">
+<span id="r-tclmeasure-vector-output-and-package-defaults"></span><span id="r-3a3atclmeasureqzvector20output20and20package20defaults"></span><h2>Vector output and package defaults<a class="headerlink" href="#vector-output-and-package-defaults" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">-between</span></code> and <code class="docutils literal notranslate"><span class="pre">-integ</span> <span class="pre">{...</span> <span class="pre">-cum}</span></code> accept the outer option <code class="docutils literal notranslate"><span class="pre">-output</span> <span class="pre">vector</span></code>. Their result remains a dictionary
+with <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> keys, but each value is a fully qualified real RBC vector name. Both list and vector inputs
+support either output representation. Other measurement results are unchanged by <code class="docutils literal notranslate"><span class="pre">-output</span></code>, including a global
+vector default.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">set</span><span class="w"> </span>data<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>time<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="k">}</span><span class="w"> </span>current<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">6</span><span class="k">}]</span>
+<span class="k">set</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>measure<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w">  </span><span class="o">-</span>between<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>current<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mf">2.5</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>output<span class="w"> </span>vector<span class="w">  </span><span class="o">-</span>namespace<span class="w"> </span><span class="o">::</span>results<span class="w"> </span><span class="o">-</span>names<span class="w"> </span><span class="k">{</span><span class="nv">x</span><span class="w"> </span>clippedTime<span class="w"> </span>y<span class="w"> </span><span class="err">#</span>auto<span class="k">}]</span>
+<span class="k">[</span><span class="nb">dict</span><span class="w"> </span>get<span class="w"> </span><span class="nv">$result</span><span class="w"> </span>y<span class="k">]</span><span class="w"> </span><span class="nv">range</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span>end
+<span class="c"># -&gt; 1.0 2.0 4.0 5.0</span>
+<span class="nv">rbc</span><span class="o">::</span>vector<span class="w"> </span>destroy<span class="w"> </span><span class="k">{</span><span class="o">*</span><span class="k">}[</span><span class="nb">dict</span><span class="w"> </span>values<span class="w"> </span><span class="nv">$result</span><span class="k">]</span>
+
+<span class="k">set</span><span class="w"> </span>saved<span class="w"> </span><span class="k">[</span><span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>configure<span class="k">]</span>
+<span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>configure<span class="w"> </span><span class="o">-</span>output<span class="w"> </span>vector<span class="w"> </span><span class="o">-</span>ifexists<span class="w"> </span>replace
+<span class="k">set</span><span class="w"> </span>integral<span class="w"> </span><span class="k">[</span><span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>measure<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w">  </span><span class="o">-</span>integ<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>current<span class="w"> </span><span class="o">-</span>cum<span class="k">}</span><span class="w"> </span><span class="o">-</span>namespace<span class="w"> </span><span class="o">::</span>results<span class="w"> </span><span class="o">-</span>names<span class="w"> </span><span class="k">{</span><span class="nv">x</span><span class="w"> </span>integralTime<span class="w"> </span>y<span class="w"> </span>integral<span class="k">}]</span>
+<span class="o">::</span><span class="nv">tclmeasure</span><span class="o">::</span>configure<span class="w"> </span><span class="k">{</span><span class="o">*</span><span class="k">}</span><span class="nv">$saved</span>
+<span class="nv">rbc</span><span class="o">::</span>vector<span class="w"> </span>destroy<span class="w"> </span><span class="k">{</span><span class="o">*</span><span class="k">}[</span><span class="nb">dict</span><span class="w"> </span>values<span class="w"> </span><span class="nv">$integral</span><span class="k">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">configure</span></code> is public but not namespace-exported. With no arguments it returns <code class="docutils literal notranslate"><span class="pre">-output</span> <span class="pre">list</span> <span class="pre">-ifexists</span> <span class="pre">error</span></code>
+initially; with one option it returns that option’s value. Updates are atomic, interpreter-local and support
+unambiguous option prefixes and <code class="docutils literal notranslate"><span class="pre">-help</span></code>. Per-call options override defaults.  There is no <code class="docutils literal notranslate"><span class="pre">-input</span></code> setting:
+supplying <code class="docutils literal notranslate"><span class="pre">-data</span></code> continues to select list input; omitting it selects vector input.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-output</span> <span class="pre">list|vector</span></code></p></td>
+<td><p>Representation of the two supported x/y results.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-names</span> <span class="pre">dictionary</span></code></p></td>
+<td><p>Destination names for <code class="docutils literal notranslate"><span class="pre">x</span></code> and/or <code class="docutils literal notranslate"><span class="pre">y</span></code>; omitted entries use <code class="docutils literal notranslate"><span class="pre">#auto</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-name</span> <span class="pre">name</span></code></p></td>
+<td><p>Shorthand for the <code class="docutils literal notranslate"><span class="pre">y</span></code> destination; cannot also specify <code class="docutils literal notranslate"><span class="pre">-names</span> <span class="pre">{y</span> <span class="pre">...}</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-namespace</span> <span class="pre">name</span></code></p></td>
+<td><p>Destination namespace, relative to the caller; missing parents are created.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-ifexists</span> <span class="pre">error|replace</span></code></p></td>
+<td><p>Reject collisions, or update existing writable real vectors in place.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Without <code class="docutils literal notranslate"><span class="pre">-namespace</span></code>, relative destinations use the caller’s namespace. Fully qualified names override the
+selected namespace; their parent namespace must exist. <code class="docutils literal notranslate"><span class="pre">#auto</span></code> (also <code class="docutils literal notranslate"><span class="pre">namespace::#auto</span></code>) uses RBC’s allocator;
+<code class="docutils literal notranslate"><span class="pre">auto</span></code> is an ordinary name. Explicit names are literal, including parentheses. Empty names/namespaces,
+unknown fields and duplicate destinations are rejected. Naming options require an eligible vector result.
+No mapped array variable is created. The caller owns the vectors and must destroy them when no longer needed.</p>
+<p>Replacement retains existing vector commands and graph clients. Complex or read-only vectors, aliases and
+unrelated commands cannot be replaced. Both results are computed and copied before publication, making reuse
+of input vectors as destinations safe. New vectors are removed on publication failure; already replaced
+existing vectors are not rolled back if an application notification callback causes a later failure.
+The current numerical kernels still produce their usual result lists internally; C publishes numeric copies
+through RBC’s API without Tcl loops over individual samples.</p>
+</section>
+<section id="interactive-measurement-help">
+<span id="r-tclmeasure-interactive-measurement-help"></span><span id="r-3a3atclmeasureqzinteractive20measurement20help"></span><h2>Interactive measurement help<a class="headerlink" href="#interactive-measurement-help" title="Link to this heading"></a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-help</span></code> for general options. Add measurement selectors to see the options for that mode:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>avg<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>find<span class="w"> </span><span class="o">-</span>when<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>deriv<span class="w"> </span><span class="o">-</span>at<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>integ<span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<p>Mode help requires no <code class="docutils literal notranslate"><span class="pre">-xname</span></code>, data dictionary, or RBC package. It accepts selectors in either order and unambiguous prefixes, such as <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-tr</span> <span class="pre">-ta</span> <span class="pre">-help</span></code>. <code class="docutils literal notranslate"><span class="pre">-h</span></code> also requests help. Use selector-only calls for contextual help; calls containing actual option values retain general help. Incompatible selector combinations are errors. Without <code class="docutils literal notranslate"><span class="pre">-help</span></code>, bare selectors still require their normal values.</p>
+</section>
+<section id="flat-measurement-clauses">
+<span id="r-tclmeasure-flat-measurement-clauses"></span><span id="r-3a3atclmeasureqzflat20measurement20clauses"></span><h2>Flat measurement clauses<a class="headerlink" href="#flat-measurement-clauses" title="Link to this heading"></a></h2>
+<p>Both forms below are equivalent. Repeated condition switches belong to the preceding selector, so trigger and target retain independent crossing conditions:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="o">-</span>vec<span class="w"> </span>input<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="o">-</span>vec<span class="w"> </span>output<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span>
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>input<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span><span class="k">}</span><span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>output<span class="w"> </span><span class="o">-</span>val<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>rise<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>integ<span class="w"> </span><span class="o">-</span>vec<span class="w"> </span>current<span class="w"> </span><span class="o">-</span>cum<span class="w"> </span><span class="o">-</span>output<span class="w"> </span>vector
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>trig<span class="w"> </span><span class="o">-</span>targ<span class="w"> </span><span class="o">-</span>help
+<span class="nv">measure</span><span class="w"> </span><span class="o">-</span>integ<span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<p>Flat clauses work for <code class="docutils literal notranslate"><span class="pre">-trig</span></code>, <code class="docutils literal notranslate"><span class="pre">-targ</span></code>, <code class="docutils literal notranslate"><span class="pre">-when</span></code>, <code class="docutils literal notranslate"><span class="pre">-integ</span></code>, and all interval measurements. Nested and flat
+clauses may be mixed. A new selector or outer option ends the current flat clause; place its conditions
+together. Within a flat clause, local options take precedence, so <code class="docutils literal notranslate"><span class="pre">-trig</span> <span class="pre">-at</span> <span class="pre">1</span></code> sets the trigger coordinate.
+Scalar <code class="docutils literal notranslate"><span class="pre">-find</span></code>, <code class="docutils literal notranslate"><span class="pre">-deriv</span></code> and outer <code class="docutils literal notranslate"><span class="pre">-at</span></code> arguments are unchanged. Unambiguous option prefixes and condition
+validation remain available.</p>
+<p>Interactive help uses argparse 0.70’s explicit <code class="docutils literal notranslate"><span class="pre">-synopsis</span></code> and <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span></code> options. Mode help shows the
+public <code class="docutils literal notranslate"><span class="pre">measure</span></code> command and relevant condition options without requiring input data or RBC.</p>
+</section>
 <section id="commands">
 <span id="r-tclmeasure-commands"></span><span id="r-3a3atclmeasureqzcommands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading"></a></h2>
 <section id="configure">
@@ -432,7 +563,7 @@ measure -xname time -data $data -integ -vec current -from 0 -to 1 -cum
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="tclmeasure.html" class="btn btn-neutral float-left" title="Content" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tclmeasure.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

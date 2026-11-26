@@ -1,8 +1,10 @@
-# Content
+# Overview
+
+SPICE-style measurements of sampled data, with Tcl list and optional RBC vector input and output.
 
 [![Tests: Linux, Windows UCRT64 and MSVC](https://img.shields.io/github/actions/workflow/status/georgtree/tclmeasure/tests.yml?branch=main&label=Tests%3A%20Linux%2C%20Windows%20UCRT64%20and%20MSVC)](https://github.com/georgtree/tclmeasure/actions/workflows/tests.yml)
 
-- [Emulation of measure command in SPICE](https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html)
+- [User manual and command reference](https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html)
 
 # Installation and dependencies
 
@@ -80,46 +82,8 @@ make
 library is not linked into tclmeasure. Use matching RBC headers and runtime. `--without-rbc` explicitly selects
 the default list-only build. Run `make clean` when changing this option in an existing build directory.
 
-Read-only RBC vectors are accepted as inputs. Output replacement requires writable real vectors;
-tclmeasure never unlocks a vector. Use RBC 0.8.1 or newer headers and runtime.
-
-Even an RBC-enabled build can load and process lists without RBC installed. The `rbc::vector` package is loaded
-only when vector input or output is requested (including configuring a vector output default). Tk initialization is not required for vector measurements; the installed
-RBC binary must still have its own system library dependencies available.
-
-With `-data`, measurement inputs are lists looked up in that dictionary, as before. Omit `-data` to interpret
-`-xname`, `-vec`, `-vec1`, `-vec2`, `-find` and `-deriv` as RBC vector command names:
-
-```tcl
-package require tclmeasure
-package require rbc::vector
-rbc::vector create time signal
-time set {0 1 2 3}
-signal set {0 2 4 6}
-::tclmeasure::measure -xname time -trig {-at 0.5} -targ {-vec signal -val 3 -rise 1}
-# -> xtrig 0.5 xtarg 1.5 xdelta 1.0
-```
-
-All measurement modes accept vectors. Names are resolved in the namespace of the caller of `measure`, with
-normal Tcl command lookup; fully qualified names also work. Use the vector's actual command name, not a Tcl
-alias or an imported command with a different name. Mapped array variables are not needed. Only real vectors
-are supported, with equal sample counts and strictly increasing X values. External vector index offsets do
-not affect sample alignment. Supply at least two samples, or three for derivative measurements.
-
-The wrapper passes names directly to C; it does not extract the full vectors as lists. A shared read-only
-accessor serves both input types. RMS squares samples while reading, before interpolation, matching the list
-implementation without creating a temporary vector. Returned values retain their existing forms by default.
-`-between` and cumulative integration additionally support vector output; `-cross all` and scalar measurements
-retain their existing result types. Interpolation and measurement semantics are unchanged.
-
-The internal C commands retain their original list signatures. Their `Vectors` counterparts use the same
-arguments with vector names in the data positions; unused `FindDerivWhenVectors` inputs remain empty strings.
-`RmsVectors` uses the `IntegVectors` signature with the final cumulative flag set to false. These commands
-initialize stubs in the current interpreter before borrowing sample storage and do not evaluate Tcl or process
-events while reading it.
-
-The test suite retains the list cases and repeats them with vector names and the same expected results when
-`rbc::vector` and direct vector support are available. Run it against both build configurations.
+For vector input, output naming and package defaults, see the
+[user manual](https://georgtree.github.io/tclmeasure/tclmeasure-tclmeasure.html).
 
 # Supported platforms
 
@@ -129,56 +93,6 @@ Any OS that has tcl9.0 (Linux, Windows, FreeBSD).
 
 You can find some documentation [here](https://georgtree.github.io/tclmeasure). Also on Linux you can open manpages
 installed after run of `make install`.
-
-## Vector output and package defaults
-
-`-between` and `-integ {... -cum}` accept the outer option `-output vector`. Their result remains a dictionary
-with `x` and `y` keys, but each value is a fully qualified real RBC vector name. Both list and vector inputs
-support either output representation. Other measurement results are unchanged by `-output`, including a global
-vector default.
-
-```tcl
-set data [dict create time {0 1 2 3} current {0 2 4 6}]
-set result [::tclmeasure::measure -data $data -xname time \
-    -between {-vec current -from 0.5 -to 2.5} -output vector \
-    -namespace ::results -names {x clippedTime y #auto}]
-[dict get $result y] range 0 end
-# -> 1.0 2.0 4.0 5.0
-rbc::vector destroy {*}[dict values $result]
-
-set saved [::tclmeasure::configure]
-::tclmeasure::configure -output vector -ifexists replace
-set integral [::tclmeasure::measure -data $data -xname time \
-    -integ {-vec current -cum} -namespace ::results -names {x integralTime y integral}]
-::tclmeasure::configure {*}$saved
-rbc::vector destroy {*}[dict values $integral]
-```
-
-`configure` is public but not namespace-exported. With no arguments it returns
-`-output list -ifexists error` initially; with one option it returns that option's value. Updates are atomic,
-interpreter-local and support unambiguous option prefixes and `-help`. Per-call options override defaults.
-There is no `-input` setting: supplying `-data` continues to select list input; omitting it selects vector input.
-
-| Option                    | Meaning                                                                     |
-|---------------------------|-----------------------------------------------------------------------------|
-| `-output list|vector`     | Representation of the two supported x/y results.                            |
-| `-names dictionary`       | Destination names for `x` and/or `y`; omitted entries use `#auto`.          |
-| `-name name`              | Shorthand for the `y` destination; cannot also specify `-names {y ...}`.    |
-| `-namespace name`         | Destination namespace, relative to the caller; missing parents are created. |
-| `-ifexists error|replace` | Reject collisions, or update existing writable real vectors in place.       |
-
-Without `-namespace`, relative destinations use the caller's namespace. Fully qualified names override the
-selected namespace; their parent namespace must exist. `#auto` (also `namespace::#auto`) uses RBC's allocator;
-`auto` is an ordinary name. Explicit names are literal, including parentheses. Empty names/namespaces,
-unknown fields and duplicate destinations are rejected. Naming options require an eligible vector result.
-No mapped array variable is created. The caller owns the vectors and must destroy them when no longer needed.
-
-Replacement retains existing vector commands and graph clients. Complex or read-only vectors, aliases and
-unrelated commands cannot be replaced. Both results are computed and copied before publication, making reuse
-of input vectors as destinations safe. New vectors are removed on publication failure; already replaced
-existing vectors are not rolled back if an application notification callback causes a later failure.
-The current numerical kernels still produce their usual result lists internally; C publishes numeric copies
-through RBC's API without Tcl loops over individual samples.
 
 ## Installation layout and removal
 
@@ -232,55 +146,14 @@ not write to the configured system prefix. `DIST_ROOT` and `DIST_NAME` may be ov
 directory and name; `DIST_NAME` must be a single directory name. Run `dist-clean` separately, not alongside `dist`
 or `dist-zip` in the same parallel make invocation.
 
-## Memory regression tests
+## Testing
+
+The test suite retains the list cases and repeats them with vector names and the same expected results when
+`rbc::vector` and direct vector support are available. Run it against both build configurations.
+
+### Memory regression tests
 
 Run `make test` with an ordinary Tcl build for the functional tests. The `test/whenMemory.test` tests call the native
 measurement command directly to check result lifetime and error handling independently of argparse. Live allocation
 checks additionally require Tcl built with `--enable-symbols=mem`; these checks are automatically skipped on ordinary
 Tcl builds. They cover all six WHEN/FIND/DERIV modes and early, partial-result and no-match errors.
-
-## Interactive measurement help
-
-Use `measure -help` for general options. Add measurement selectors to see the options for that mode:
-
-```tcl
-measure -avg -help
-measure -trig -targ -help
-measure -find -when -help
-measure -deriv -at -help
-measure -integ -help
-```
-
-Mode help requires no `-xname`, data dictionary, or RBC package. It accepts selectors in either order and unambiguous
-prefixes, such as `measure -tr -ta -help`. `-h` also requests help.  Use selector-only calls for contextual help; calls
-containing actual option values retain general help.  Incompatible selector combinations are errors. Without `-help`,
-bare selectors still require their normal values.
-
-### Flat measurement clauses and interactive help
-
-Both forms below are equivalent. Repeated condition switches belong to the preceding
-selector, so trigger and target retain independent crossing conditions:
-
-```tcl
-measure -xname time -data $data \
-    -trig -vec input -val 0.5 -rise 1 \
-    -targ -vec output -val 0.5 -rise 1
-measure -xname time -data $data \
-    -trig {-vec input -val 0.5 -rise 1} \
-    -targ {-vec output -val 0.5 -rise 1}
-
-measure -xname time -data $data -integ -vec current -cum -output vector
-measure -trig -targ -help
-measure -integ -help
-```
-
-Flat clauses work for `-trig`, `-targ`, `-when`, `-integ`, and all interval
-measurements. Nested and flat clauses may be mixed. A new selector or outer option
-ends the current flat clause; place its conditions together. Within a flat clause,
-local options take precedence, so `-trig -at 1` sets the trigger coordinate.
-Scalar `-find`, `-deriv` and outer `-at` arguments are unchanged. Unambiguous option
-prefixes and condition validation remain available.
-
-Interactive help uses argparse 0.70's explicit `-synopsis` and `-synopsiscmd`
-options. Mode help shows the public `measure` command and relevant condition
-options without requiring input data or RBC.
