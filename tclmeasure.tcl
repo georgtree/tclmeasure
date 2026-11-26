@@ -1,4 +1,4 @@
-package require argparse 0.65
+package require argparse 0.70
 package provide tclmeasure 0.9
 
 namespace eval ::tclmeasure {
@@ -27,13 +27,16 @@ proc ::tclmeasure::configure {args} {
     # Returns: The queried value, or the complete configuration dictionary.
     variable Defaults
     if {([llength $args] == 1) && ([lindex $args 0] ne {-help})} {
-        set arguments [argparse -inline -help {Query package defaults.} {
+        set arguments [argparse -inline -synopsiscmd ::tclmeasure::configure -synopsis {option}\
+                               -help {Query package defaults.} {
             {-output -key query -value -output -help {Query the default output representation}}
             {-ifexists -key query -value -ifexists -help {Query the default collision policy}}
         }]
         return [dict get $Defaults [dict get $arguments query]]
     }
-    set arguments [argparse -inline -help {Query or change package defaults atomically.} {
+    set arguments [argparse -inline -synopsiscmd ::tclmeasure::configure\
+                           -synopsis {?option? | ?-output list|vector? ?-ifexists error|replace?}\
+                           -help {Query or change package defaults atomically.} {
         {-output= -enum {list vector} -help {Default representation for between and cumulative output}}
         {-ifexists= -enum {error replace} -help {Default vector collision policy}}
     }]
@@ -145,11 +148,11 @@ proc ::tclmeasure::ConditionDefinition {kind} {
                 {-val= -forbid at -type double -help {Comparison level for -vec}}
                 {-td|delay= -default 0.0 -forbid at -require {vec val} -type double\
                          -help {Ignore crossings before this x-coordinate; default 0}}
-                {-cross= -forbid {rise fall} -forbid at -require {vec val}\
+                {-cross= -forbid {rise fall at} -require {vec val}\
                          -help {Either-direction crossing count: positive integer or last}}
-                {-rise= -forbid {cross fall} -forbid at -require {vec val}\
+                {-rise= -forbid {cross fall at} -require {vec val}\
                          -help {Rising crossing count: positive integer or last}}
-                {-fall= -forbid {cross rise} -forbid at -require {vec val}\
+                {-fall= -forbid {cross rise at} -require {vec val}\
                          -help {Falling crossing count: positive integer or last}}
             }
         }
@@ -197,6 +200,83 @@ proc ::tclmeasure::ConditionDefinition {kind} {
     }
 }
 
+# Resolve a switch against an existing argparse definition. Exact aliases win over
+# prefixes. Unknown or ambiguous words are left for argparse to diagnose.
+proc ::tclmeasure::ResolveSwitch {word definition} {
+    set matches {}
+    foreach item $definition {
+        set spelling [lindex $item 0]
+        set takesValue [string match *= $spelling]
+        set aliases [split [string trimright $spelling =] |]
+        set canonical [lindex $aliases 0]
+        foreach alias $aliases {
+            if {![string match -* $alias]} {
+                set alias -$alias
+            }
+            if {$word eq $alias} {
+                return [list $canonical $takesValue]
+            }
+            if {($word ni {{} -}) && ([string first $word $alias] == 0)} {
+                dict set matches $canonical $takesValue
+            }
+        }
+    }
+    if {[dict size $matches] == 1} {
+        return $matches
+    }
+    return
+}
+
+# Convert flat clauses to the existing nested syntax without parsing values.
+# Definitions remain the single source of switch aliases, arity and validation.
+# In a flat clause, local options take precedence (notably trigger -at).
+# Outer options end a clause; a following clause must start with a selector.
+proc ::tclmeasure::NormalizeMeasureArgs {arguments} {
+    set outer [MeasureDefinition]
+    set kinds [dict create -trig trigger -targ trigger -when when -integ integ -avg interval -rms interval -min extrema\
+                       -max extrema -pp extrema -minat extrema -maxat extrema -between extrema]
+    set result {}
+    for {set i 0} {$i < [llength $arguments]} {incr i} {
+        set word [lindex $arguments $i]
+        lassign [ResolveSwitch $word $outer] option takesValue
+        lappend result $word
+        if {($option eq {}) || !$takesValue} {
+            continue
+        }
+        if {[dict exists $kinds $option]} {
+            set definition [ConditionDefinition [dict get $kinds $option]]
+            set next [lindex $arguments [expr {$i + 1}]]
+            if {[ResolveSwitch $next $definition] ne {}} {
+                set clause {}
+                while {$i + 1 < [llength $arguments]} {
+                    set next [lindex $arguments [expr {$i + 1}]]
+                    lassign [ResolveSwitch $next $definition] local value
+                    if {$local eq {}} {
+                        if {([ResolveSwitch $next $outer] ne {}) || ($next in {-help -h})} {
+                            break
+                        }
+                        # Retain invalid clause options so argparse reports them in context.
+                        lappend clause $next
+                        incr i
+                        continue
+                    }
+                    lappend clause $next
+                    incr i
+                    if {$value && ($i + 1 < [llength $arguments])} {
+                        lappend clause [lindex $arguments [incr i]]
+                    }
+                }
+                lappend result $clause
+                continue
+            }
+        }
+        if {$i + 1 < [llength $arguments]} {
+            lappend result [lindex $arguments [incr i]]
+        }
+    }
+    return $result
+}
+
 # Selector-only help is handled before required inputs or vector support are checked.
 # Calls containing actual option values retain the ordinary top-level help behavior.
 proc ::tclmeasure::MeasureHelp {arguments} {
@@ -230,14 +310,16 @@ proc ::tclmeasure::MeasureHelp {arguments} {
         return 0
     }
     set selected [lsort $selected]
-    set common {measure -xname name ?-data dictionary?}
+    set common {-xname name ?-data dictionary?}
     switch -- $selected {
         {-targ -trig} - 
         -trig - 
         -targ {
             set kind trigger
-            set synopsis "$common -trig {conditions} -targ {conditions}"
-            set detail {Options below apply separately to both trigger and target conditions}
+            set synopsis "$common -trig -vec signal -val level ?-td x? -cross|rise|fall count -targ -vec signal\
+                                -val level ?-td x? -cross|rise|fall count"
+            set detail {Options below apply separately to trigger and target. Supply each clause as flat switches or as\
+                                a braced list}
         }
         {-find -when} - 
         {-deriv -when} - 
@@ -250,7 +332,7 @@ proc ::tclmeasure::MeasureHelp {arguments} {
             if {{-deriv} in $selected} {
                 set mode {-deriv signal }
             }
-            set synopsis "$common ${mode}-when {conditions}"
+            set synopsis "$common ${mode}-when conditions"
             set detail {Options below describe -when conditions. Select a level crossing or equality of two signals}
         }
         {-at -find} - 
@@ -293,8 +375,8 @@ proc ::tclmeasure::MeasureHelp {arguments} {
         }
     }
     if {![info exists synopsis]} {
-        set synopsis "$common [lindex $selected 0] {options}"
-        set detail {Options below describe the nested measurement argument.}
+        set synopsis "$common [lindex $selected 0] -vec signal ?options?"
+        set detail {Supply the options below directly after the selector, or together as a braced list}
     }
     if {[info exists kind]} {
         set definition [ConditionDefinition $kind]
@@ -303,8 +385,7 @@ proc ::tclmeasure::MeasureHelp {arguments} {
         append synopsis { ?-output list|vector? ?-names dictionary? ?-name name? ?-namespace name?\
                                   ?-ifexists error|replace?}
     }
-    puts "Usage: $synopsis"
-    argparse -inline -helplevel 1 -help $detail $definition {-help}
+    argparse -inline -helplevel 1 -synopsiscmd measure -synopsis $synopsis -help $detail $definition {-help}
     return 1
 }
 
@@ -530,6 +611,19 @@ proc ::tclmeasure::measure {args} {
     # `measure -avg -help`, `measure -trig -targ -help`, `measure -find -when -help`,
     # `measure -deriv -at -help`, or `measure -when -help`.
     # Mode help accepts unambiguous selector prefixes and needs no input data or RBC support.
+    # Conditions may be supplied as a nested list or as flat switches after their selector. Each flat clause
+    # continues until the next outer option or measurement selector. Local options belong to the current clause;
+    # for example, -at after a flat -trig belongs to the trigger. Values are consumed as single Tcl words, even
+    # when they begin with a dash. Nested and flat clauses may be mixed. Existing option prefixes are supported.
+    #
+    # ```
+    # measure -xname time -data $data -trig -vec in -val 0.5 -rise 1 -targ -vec out -val 0.5 -rise 1
+    # measure -xname time -data $data -integ -vec current -from 0 -to 1 -cum
+    # ```
+    #
+    # Synopsis: -xname name ?-data dictionary? -trig -vec signal -val level ?-td x? -rise count -targ -vec signal
+    # -val level -rise count
+    # Synopsis: -xname name ?-data dictionary? -integ -vec signal ?-from x? ?-to x? ?-cum?
     # Bare selectors without -help remain measurement calls and require their normal arguments.
     #
     # Synopsis: -xname value -data value -integ \{-vec value ?-td value? ?-from value? ?-to value? ?-cum?\}
@@ -537,7 +631,9 @@ proc ::tclmeasure::measure {args} {
     if {[MeasureHelp $args]} {
         return
     }
-    argparse -help {Does different measurements of input data lists. This procedure imitates the .meas command from\
+    set args [NormalizeMeasureArgs $args]
+    argparse -synopsiscmd measure -synopsis {-xname name ?-data dictionary? measurement ?output-options?}\
+        -help {Does different measurements of input data lists. This procedure imitates the .meas command from\
                             SPICE3 and Ngspice in particular. It has mutiple modes, and each mod could have different\
                             forms: Trigger-Target, Find-When, Deriv-When, Find-At, Deriv-At,\
                             Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between and Integ. See documentation for further details}\

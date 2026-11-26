@@ -5512,7 +5512,7 @@ fi
 
 # Test files to include in the distribution.
 # Paths are relative to $srcdir.
-DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test"
+DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test test/help.test test/flat.test"
 
 
 

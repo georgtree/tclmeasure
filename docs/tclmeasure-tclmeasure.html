@@ -56,7 +56,10 @@
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-layout-and-removal">Installation layout and removal</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-archives">Installation archives</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#memory-regression-tests">Memory regression tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#interactive-measurement-help">Interactive measurement help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#interactive-measurement-help">Interactive measurement help</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tclmeasure.html#flat-measurement-clauses-and-interactive-help">Flat measurement clauses and interactive help</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">::tclmeasure</a><ul>
@@ -143,6 +146,8 @@ need at least two. See the installation page for optional RBC build and runtime 
 <strong>measure</strong> <em>-xname value -data value -find value -at value</em>
 <strong>measure</strong> <em>-xname value -data value -deriv value -at value</em>
 <strong>measure</strong> <em>-xname value -data value -avg|rms|pp|min|max|minat|maxat|between {-vec value ?-td value? ?-from value? ?-to value?}</em>
+<strong>measure</strong> <em>-xname name ?-data dictionary? -trig -vec signal -val level ?-td x? -rise count -targ -vec signal -val level -rise count</em>
+<strong>measure</strong> <em>-xname name ?-data dictionary? -integ -vec signal ?-from x? ?-to x? ?-cum? Bare selectors without -help remain measurement calls and require their normal arguments.</em>
 <strong>measure</strong> <em>-xname value -data value -integ {-vec value ?-td value? ?-from value? ?-to value? ?-cum?}</em></pre>
 <p class="rubric">Parameters</p>
 <dl class="field-list simple">
@@ -409,7 +414,14 @@ Use <code class="docutils literal notranslate"><span class="pre">measure</span> 
 <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-avg</span> <span class="pre">-help</span></code>, <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-trig</span> <span class="pre">-targ</span> <span class="pre">-help</span></code>, <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-find</span> <span class="pre">-when</span> <span class="pre">-help</span></code>,
 <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-deriv</span> <span class="pre">-at</span> <span class="pre">-help</span></code>, or <code class="docutils literal notranslate"><span class="pre">measure</span> <span class="pre">-when</span> <span class="pre">-help</span></code>.
 Mode help accepts unambiguous selector prefixes and needs no input data or RBC support.
-Bare selectors without -help remain measurement calls and require their normal arguments.</p>
+Conditions may be supplied as a nested list or as flat switches after their selector. Each flat clause
+continues until the next outer option or measurement selector. Local options belong to the current clause;
+for example, -at after a flat -trig belongs to the trigger. Values are consumed as single Tcl words, even
+when they begin with a dash. Nested and flat clauses may be mixed. Existing option prefixes are supported.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>measure -xname time -data $data -trig -vec in -val 0.5 -rise 1 -targ -vec out -val 0.5 -rise 1
+measure -xname time -data $data -integ -vec current -from 0 -to 1 -cum
+</pre></div>
+</div>
 <hr class="docutils" />
 <p class="centered">
 <strong>Copyright (c) George Yashin</strong></p></section>

@@ -1,0 +1,89 @@
+package require tcltest
+namespace import ::tcltest::*
+package require tclmeasure
+
+set flatData {x {0 1 2 3 4} y {0 1 0 1 0} z {1 0 1 0 1}}
+foreach {label flat nested} {
+    trigger {-trig -vec y -val 0.5 -rise 1 -targ -vec z -val 0.5 -fall 2}
+        {-trig {-vec y -val 0.5 -rise 1} -targ {-vec z -val 0.5 -fall 2}}
+    fixed {-trig -at 0.5 -targ -at 2.5} {-trig {-at 0.5} -targ {-at 2.5}}
+    mixed {-trig {-at 0.5} -targ -at 2.5} {-trig {-at 0.5} -targ {-at 2.5}}
+    when {-find z -when -vec y -val 0.5 -rise 1} {-find z -when {-vec y -val 0.5 -rise 1}}
+    equality {-when -vec1 y -vec2 z -cross all} {-when {-vec1 y -vec2 z -cross all}}
+    derivative {-deriv z -when -vec y -val 0.5 -rise 1} {-deriv z -when {-vec y -val 0.5 -rise 1}}
+    integral {-integ -vec y -from 0 -to 4} {-integ {-vec y -from 0 -to 4}}
+    cumulative {-integ -vec y -cum -output list} {-integ {-vec y -cum} -output list}
+    average {-avg -vec y -from 0 -to 4} {-avg {-vec y -from 0 -to 4}}
+    rms {-rms -vec y} {-rms {-vec y}}
+    minimum {-min -vec y} {-min {-vec y}}
+    maximum {-max -vec y} {-max {-vec y}}
+    pp {-pp -vec y} {-pp {-vec y}}
+    minat {-minat -vec y} {-minat {-vec y}}
+    maxat {-maxat -vec y} {-maxat {-vec y}}
+    between {-between -vec y -from 0.5 -to 3.5} {-between {-vec y -from 0.5 -to 3.5}}
+    prefixes {-tr -ve y -va 0.5 -ri 1 -ta -ve z -va 0.5 -fa 2}
+        {-trig {-vec y -val 0.5 -rise 1} -targ {-vec z -val 0.5 -fall 2}}
+    delay {-trig -vec y -val 0.5 -delay -1 -rise 1 -targ -at 3}
+        {-trig {-vec y -val 0.5 -delay -1 -rise 1} -targ {-at 3}}
+} {
+    test flat-$label {flat and nested forms have identical results} -body {
+        expr {[::tclmeasure::measure -xname x -data $flatData {*}$flat] eq
+              [::tclmeasure::measure -xname x -data $flatData {*}$nested]}
+    } -result 1
+}
+
+test flat-dash-value {values that look like selectors remain values} -body {
+    ::tclmeasure::NormalizeMeasureArgs {-avg -vec -targ -from -1 -to 2}
+} -result {-avg {-vec -targ -from -1 -to 2}}
+
+test flat-outer-values {dictionary and destination values are opaque} -body {
+    ::tclmeasure::NormalizeMeasureArgs {-data {-trig -vec} -between -vec y -names {y -targ} -xname x}
+} -result {-data {-trig -vec} -between {-vec y} -names {y -targ} -xname x}
+
+foreach bad {
+    {-avg -vec y -from nope}
+    {-integ -vec}
+    {-trig -vec y -val 0.5 -rise 1 -fall 1 -targ -at 3}
+    {-avg -vec y -nonsense 1}
+} {
+    test flat-invalid-$bad {invalid flat clauses still undergo argparse validation} -body {
+        catch {::tclmeasure::measure -xname x -data $flatData {*}$bad}
+    } -result 1
+}
+
+test flat-help {flat help does not require data access} -body {
+    ::tclmeasure::measure -avg -vec y -help
+} -match glob -output {*measure -xname name*-avg*} -result {}
+
+test synopsis-mode {contextual synopsis names the public command} -body {
+    ::tclmeasure::measure -avg -help
+} -match glob -output {*measure -xname name*-avg -vec signal*} -result {}
+
+test synopsis-configure {configuration synopsis is qualified} -body {
+    ::tclmeasure::configure -help
+} -match glob -output {*::tclmeasure::configure*} -result {}
+
+testConstraint flatVectors [expr {![catch {::tclmeasure::VectorSupport}]}]
+test flat-vector-output {flat syntax preserves vector caller namespaces and output options} -constraints flatVectors\
+        -setup {
+    namespace eval ::flatScope {}
+    rbc::vector create ::flatScope::x ::flatScope::y
+    ::flatScope::x set {0 1 2 3 4}
+    ::flatScope::y set {0 1 0 1 0}
+} -body {
+    namespace eval ::flatScope {
+        set result [::tclmeasure::measure -xname x -between -vec y -from 0.5 -to 3.5 -output vector -namespace results\
+                            -names {x abscissa y ordinate}]
+        set nested [::tclmeasure::measure -xname x -between {-vec y -from 0.5 -to 3.5}]
+        list $result [expr {[[dict get $result x] range 0 end] eq [dict get $nested x]}]\
+                [expr {[[dict get $result y] range 0 end] eq [dict get $nested y]}]
+    }
+} -cleanup {
+    foreach name {::flatScope::x ::flatScope::y ::flatScope::results::abscissa ::flatScope::results::ordinate} {
+        catch {rbc::vector destroy $name}
+    }
+    namespace delete ::flatScope
+} -result {{x ::flatScope::results::abscissa y ::flatScope::results::ordinate} 1 1}
+
+unset flatData
+cleanupTests

@@ -1,0 +1,208 @@
+package require tcltest
+namespace import ::tcltest::*
+package require tclmeasure
+
+namespace eval ::measureOutputTest {
+    variable data {t {0 1 2 3 4} v {0 2 4 6 8}}
+    proc cleanup {} {
+        ::tclmeasure::configure -output list -ifexists error
+        namespace delete ::measureOutputTest::dest
+        namespace eval ::measureOutputTest::dest {}
+    }
+    namespace eval dest {}
+    proc call {args} {
+        variable data
+        tailcall ::tclmeasure::measure -data $data -xname t {*}$args
+    }
+    proc values {result} {
+        dict map {key name} $result {$name range 0 end}
+    }
+}
+set hasVectors [expr {![catch {::tclmeasure::VectorSupport}]}]
+testConstraint measureOutputVectors $hasVectors
+testConstraint measureOutputNoVectors [expr {!$hasVectors}]
+
+test output-config-1 {defaults, abbreviations and nonexported configure} -body {
+    list [::tclmeasure::configure] [::tclmeasure::configure -out] [namespace eval ::tclmeasure {namespace export}]
+} -result {{-output list -ifexists error} list measure}
+
+test output-config-2 {invalid updates are atomic} -body {
+    catch {::tclmeasure::configure -ifexists replace -output bad}
+    ::tclmeasure::configure
+} -result {-output list -ifexists error}
+
+test output-config-3 {no RBC means vector configuration fails without changing defaults} \
+        -constraints measureOutputNoVectors -body {
+    list [catch {::tclmeasure::configure -ifexists replace -output vector}] [::tclmeasure::configure]
+} -result {1 {-output list -ifexists error}}
+
+test output-list-1 {explicit list output preserves the existing dictionary} -body {
+    ::measureOutputTest::call -between {-vec v -from 0.5 -to 2.5} -output list
+} -result {x {0.5 1 2 2.5} y {1.0 2 4 5.0}}
+
+foreach extra {{-name result} {-names {x a}} {-namespace results}} {
+    test output-list-naming-$extra {naming requires an eligible vector result} -body {
+        catch {::measureOutputTest::call -between {-vec v} {*}$extra} message
+        string match {*requires vector output*} $message
+    } -result 1
+}
+
+foreach mode {{-between {-vec v -from 0.5 -to 2.5}} {-integ {-vec v -from 0.5 -to 2.5 -cum}}} {
+    foreach input {list vector} {
+        test output-parity-$mode-$input {representation preserves both x and y samples}\
+                -constraints measureOutputVectors -setup {
+            ::measureOutputTest::cleanup
+        } -body {
+            set expected [::measureOutputTest::call {*}$mode -output list]
+            if {$input eq {list}} {
+                set result [::measureOutputTest::call {*}$mode -out vector -namespace ::measureOutputTest::dest]
+            } else {
+                ::rbc::vector create ::measureOutputTest::dest::t ::measureOutputTest::dest::v -variable {}
+                ::measureOutputTest::dest::t set {0 1 2 3 4}
+                ::measureOutputTest::dest::v set {0 2 4 6 8}
+                ::measureOutputTest::dest::t readonly 1
+                ::measureOutputTest::dest::v readonly 1
+                set result [namespace eval ::measureOutputTest::dest [list ::tclmeasure::measure -xname t\
+                                                                              {*}$mode -output vector]]
+            }
+            set actual [::measureOutputTest::values $result]
+            set equal 1
+            foreach key {x y} {
+                if {[llength [dict get $actual $key]] != [llength [dict get $expected $key]]} {
+                    set equal 0
+                }
+                foreach a [dict get $actual $key] b [dict get $expected $key] {
+                    if {abs($a-$b)>1e-12} {
+                        set equal 0
+                    }
+                }
+            }
+            list $equal [expr {[dict get $result x] ne [dict get $result y]}]
+        } -cleanup {::measureOutputTest::cleanup} -result {1 1}
+    }
+}
+
+test output-names-1 {caller, relative namespace, auto, literal parentheses and no mapped variable}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    set result [namespace eval ::measureOutputTest::dest {
+        ::measureOutputTest::call -between {-vec v} -output vector -namespace nested::results -names {x #auto y v(1)}
+    }]
+    list [string match ::measureOutputTest::dest::nested::results::* [dict get $result x]] [dict get $result y]\
+            [info exists ::measureOutputTest::dest::nested::results::v]
+} -cleanup {::measureOutputTest::cleanup} -result {1 ::measureOutputTest::dest::nested::results::v(1) 0}
+
+test output-names-2 {absolute name wins; auto without hash is literal; name aliases y}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    ::measureOutputTest::call -between {-vec v} -output vector -namespace ::measureOutputTest::dest::nested\
+            -names {x auto} -name ::measureOutputTest::dest::absolute
+} -cleanup {::measureOutputTest::cleanup}\
+        -result {x ::measureOutputTest::dest::nested::auto y ::measureOutputTest::dest::absolute}
+
+foreach names {{x same y same} {z bad} {x {}} {x a y a::}} {
+    test output-invalid-$names {invalid destinations do not leave new vectors}\
+            -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+        set failed [catch {::measureOutputTest::call -between {-vec v} -output vector\
+                                   -namespace ::measureOutputTest::dest -names $names}]
+        list $failed [::rbc::vector names ::measureOutputTest::dest::*]
+    } -cleanup {::measureOutputTest::cleanup} -result {1 {}}
+}
+
+test output-conflict {name and names y are mutually exclusive} -constraints measureOutputVectors -body {
+    catch {::measureOutputTest::call -between {-vec v} -output vector -name a -names {y b}} message
+    set message
+} -result {use either -name or -names y, not both}
+
+test output-replace {replacement keeps the command and changes its values; collision errors preflight both outputs}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    ::rbc::vector create ::measureOutputTest::dest::y -variable {}
+    ::measureOutputTest::dest::y set {99}
+    set arguments {-between {-vec v} -output vector -namespace ::measureOutputTest::dest -names {x x y y}}
+    set error [catch {::measureOutputTest::call {*}$arguments}]
+    set unchanged [::measureOutputTest::dest::y range 0 end]
+    set noX [expr {[info commands ::measureOutputTest::dest::x] eq {}}]
+    set result [::measureOutputTest::call {*}$arguments -ifexists replace]
+    list $error $unchanged $noX [dict get $result y] [::measureOutputTest::dest::y range 0 end]
+} -cleanup {::measureOutputTest::cleanup} -result {1 99.0 1 ::measureOutputTest::dest::y {0.0 2.0 4.0 6.0 8.0}}
+
+foreach kind {command alias complex readonly} {
+    test output-reject-$kind {replace rejects unrelated commands and incompatible or locked vectors}\
+            -constraints measureOutputVectors -setup {
+        ::measureOutputTest::cleanup
+        switch $kind {
+            command {
+                proc ::measureOutputTest::dest::y {} {
+                    return untouched
+                }
+            }
+            alias {
+                interp alias {} ::measureOutputTest::dest::y {} list
+            }
+            complex {
+                ::rbc::vector create ::measureOutputTest::dest::y -type complex -variable {}
+            }
+            readonly {
+                ::rbc::vector create ::measureOutputTest::dest::y -variable {}
+                ::measureOutputTest::dest::y readonly 1
+            }
+        }
+    } -body {
+        list [catch {::measureOutputTest::call -between {-vec v} -output vector -ifexists replace\
+                             -namespace ::measureOutputTest::dest -names {x x y y}}]\
+                [info commands ::measureOutputTest::dest::x]
+    } -cleanup {::measureOutputTest::cleanup} -result {1 {}}
+}
+
+test output-config-vector {global vector output, scalar preservation and explicit override}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    ::tclmeasure::configure -output vector -ifexists replace
+    set result [::measureOutputTest::call -between {-vec v} -namespace ::measureOutputTest::dest]
+    list [dict keys $result] [::measureOutputTest::call -integ {-vec v}]\
+            [dict get [::measureOutputTest::call -between {-vec v} -output list] y]
+} -cleanup {::measureOutputTest::cleanup} -result {{x y} 16.0 {0.0 2 4 6 8.0}}
+
+test output-alias {output can replace an input after calculation finishes} -constraints measureOutputVectors\
+        -setup {::measureOutputTest::cleanup} -body {
+    ::rbc::vector create ::measureOutputTest::dest::t ::measureOutputTest::dest::v -variable {}
+    ::measureOutputTest::dest::t set {0 1 2 3 4}
+    ::measureOutputTest::dest::v set {0 2 4 6 8}
+    namespace eval ::measureOutputTest::dest {
+        ::tclmeasure::measure -xname t -between {-vec v -from 0.5 -to 2.5} -output vector -names {x t y v}\
+                -ifexists replace
+    }
+    ::measureOutputTest::dest::v range 0 end
+} -cleanup {::measureOutputTest::cleanup} -result {1.0 2.0 4.0 5.0}
+
+test output-rollback {late namespace creation failure removes earlier new destinations}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    set failed [catch {::measureOutputTest::call -between {-vec v} -output vector \
+                               -names {x ::measureOutputTest::dest::created y ::measureOutputTest::dest::absent::y}}]
+    list $failed [::rbc::vector names ::measureOutputTest::dest::*]
+} -cleanup {::measureOutputTest::cleanup} -result {1 {}}
+
+test output-auto {qualified auto names are allocated by RBC; repeated calls create fresh outputs}\
+        -constraints measureOutputVectors -setup {::measureOutputTest::cleanup} -body {
+    namespace eval ::measureOutputTest::dest::nested {}
+    set first [::measureOutputTest::call -between {-vec v} -output vector -namespace ::measureOutputTest::dest\
+                       -names {x nested::#auto y ::measureOutputTest::dest::#auto}]
+    set second [::measureOutputTest::call -between {-vec v} -output vector -namespace ::measureOutputTest::dest]
+    list [string match ::measureOutputTest::dest::nested::* [dict get $first x]]\
+            [expr {[dict get $first y] ne [dict get $second y]}]
+} -cleanup {::measureOutputTest::cleanup} -result {1 1}
+
+test output-default-isolation {configuration is local to each interpreter} -body {
+    set child [interp create]
+    try {
+        $child eval [list set auto_path $::auto_path]
+        $child eval [list package ifneeded argparse [package provide argparse]\
+                             [package ifneeded argparse [package provide argparse]]]
+        $child eval [list source [file join [file dirname [info script]] .. tclmeasure.tcl]]
+        ::tclmeasure::configure -ifexists replace
+        $child eval {::tclmeasure::configure}
+    } finally {
+        interp delete $child
+        ::tclmeasure::configure -ifexists error
+    }
+} -result {-output list -ifexists error}
+
+namespace delete ::measureOutputTest
+cleanupTests

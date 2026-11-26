@@ -86,7 +86,7 @@ AC_SUBST([DOC_HTML_FILES])
 
 # Test files to include in the distribution.
 # Paths are relative to $srcdir.
-DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test"
+DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test test/help.test test/flat.test"
 AC_SUBST([DIST_TEST_FILES])
 
 TEA_PUBLIC_TCL_HEADERS

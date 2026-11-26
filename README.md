@@ -12,7 +12,7 @@ For building you need:
 - [make tool](https://www.gnu.org/software/make/)
 
 For run you also need:
-- [argparse](https://github.com/georgtree/argparse)
+- [argparse](https://github.com/georgtree/argparse) 0.70 or newer
 - [Tcllib](https://www.tcl.tk/software/tcllib/)
 
 To build run 
@@ -159,13 +159,13 @@ rbc::vector destroy {*}[dict values $integral]
 interpreter-local and support unambiguous option prefixes and `-help`. Per-call options override defaults.
 There is no `-input` setting: supplying `-data` continues to select list input; omitting it selects vector input.
 
-| Option | Meaning |
-| --- | --- |
-| `-output list|vector` | Representation of the two supported x/y results. |
-| `-names dictionary` | Destination names for `x` and/or `y`; omitted entries use `#auto`. |
-| `-name name` | Shorthand for the `y` destination; cannot also specify `-names {y ...}`. |
-| `-namespace name` | Destination namespace, relative to the caller; missing parents are created. |
-| `-ifexists error|replace` | Reject collisions, or update existing writable real vectors in place. |
+| Option                    | Meaning                                                                     |
+|---------------------------|-----------------------------------------------------------------------------|
+| `-output list|vector`     | Representation of the two supported x/y results.                            |
+| `-names dictionary`       | Destination names for `x` and/or `y`; omitted entries use `#auto`.          |
+| `-name name`              | Shorthand for the `y` destination; cannot also specify `-names {y ...}`.    |
+| `-namespace name`         | Destination namespace, relative to the caller; missing parents are created. |
+| `-ifexists error|replace` | Reject collisions, or update existing writable real vectors in place.       |
 
 Without `-namespace`, relative destinations use the caller's namespace. Fully qualified names override the
 selected namespace; their parent namespace must exist. `#auto` (also `namespace::#auto`) uses RBC's allocator;
@@ -255,3 +255,32 @@ Mode help requires no `-xname`, data dictionary, or RBC package. It accepts sele
 prefixes, such as `measure -tr -ta -help`. `-h` also requests help.  Use selector-only calls for contextual help; calls
 containing actual option values retain general help.  Incompatible selector combinations are errors. Without `-help`,
 bare selectors still require their normal values.
+
+### Flat measurement clauses and interactive help
+
+Both forms below are equivalent. Repeated condition switches belong to the preceding
+selector, so trigger and target retain independent crossing conditions:
+
+```tcl
+measure -xname time -data $data \
+    -trig -vec input -val 0.5 -rise 1 \
+    -targ -vec output -val 0.5 -rise 1
+measure -xname time -data $data \
+    -trig {-vec input -val 0.5 -rise 1} \
+    -targ {-vec output -val 0.5 -rise 1}
+
+measure -xname time -data $data -integ -vec current -cum -output vector
+measure -trig -targ -help
+measure -integ -help
+```
+
+Flat clauses work for `-trig`, `-targ`, `-when`, `-integ`, and all interval
+measurements. Nested and flat clauses may be mixed. A new selector or outer option
+ends the current flat clause; place its conditions together. Within a flat clause,
+local options take precedence, so `-trig -at 1` sets the trigger coordinate.
+Scalar `-find`, `-deriv` and outer `-at` arguments are unchanged. Unambiguous option
+prefixes and condition validation remain available.
+
+Interactive help uses argparse 0.70's explicit `-synopsis` and `-synopsiscmd`
+options. Mode help shows the public `measure` command and relevant condition
+options without requiring input data or RBC.
