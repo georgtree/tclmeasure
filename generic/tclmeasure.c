@@ -53,6 +53,7 @@ extern DLLEXPORT int Tclmeasure_Init(Tcl_Interp *interp) {
     if (Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, NULL) != TCL_OK) {
         return TCL_ERROR;
     }
+    Tcl_CreateObjCommand2(interp, "::tclmeasure::NativePublish", MeasurePublishCmd, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::VectorSupport", MeasureVectorSupportCmd, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::TrigTarg", (Tcl_ObjCmdProc2 *)TrigTargCmdProc2, NULL, NULL);
     Tcl_CreateObjCommand2(interp, "::tclmeasure::FindDerivWhen", (Tcl_ObjCmdProc2 *)FindDerivWhenCmdProc2, NULL, NULL);

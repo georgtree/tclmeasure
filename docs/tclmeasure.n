@@ -5,6 +5,14 @@
 .SH NAME
 Introduction - tclmeasure package
 .SH SYNOPSIS
+\fBconfigure\fP \fI?option?\fP
+.br
+\fBconfigure\fP \fI?-output list|vector? ?-ifexists error|replace?\fP
+.br
+\fBmeasure\fP \fI-xname name ?-data dictionary? -between conditions ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?\fP
+.br
+\fBmeasure\fP \fI-xname name ?-data dictionary? -integ {-vec name -cum ?-from value? ?-to value?} ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?\fP
+.br
 \fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
 \fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
@@ -104,10 +112,10 @@ nmake /f makefile\&.vc test
 .PP
 The test target adds the build directory to the package search path\&. Use nmake /f makefile\&.vc install to install
 the extension into the Tcl prefix, or nmake /f makefile\&.vc dist-zip to produce a distribution\&.
-.SH "OPTIONAL DIRECT RBC VECTOR INPUT"
+.SH "OPTIONAL RBC VECTOR SUPPORT"
 .PP
 The default build supports Tcl lists and does not need RBC headers or libraries\&. To enable direct real-vector
-input from \fIrbc-tk9\fP [URL: https://github\&.com/georgtree/rbc-tk9], build with Tcl 9 and the current RBC 0\&.8\&.1 API:
+input and vector output from \fIrbc-tk9\fP [URL: https://github\&.com/georgtree/rbc-tk9], build with Tcl 9 and the current RBC 0\&.8\&.1 API:
 .PP
 .RS 4n
 .nf
@@ -121,11 +129,11 @@ rbcDecls\&.h and rbcStubLib\&.c\&. The supplied stub client source is compiled i
 library is not linked into tclmeasure\&. Use matching RBC headers and runtime\&. --without-rbc explicitly selects
 the default list-only build\&. Run make clean when changing this option in an existing build directory\&.
 .PP
-Read-only RBC vectors are accepted as inputs; tclmeasure never writes vector storage or changes the lock\&.
-No new read-only stubs are required, so the existing RBC runtime requirement is unchanged\&.
+Read-only RBC vectors are accepted as inputs\&. Output replacement requires writable real vectors;
+tclmeasure never unlocks a vector\&. Use RBC 0\&.8\&.1 or newer headers and runtime\&.
 .PP
 Even an RBC-enabled build can load and process lists without RBC installed\&. The rbc::vector package is loaded
-only when vector input is requested\&. Tk initialization is not required for vector measurements; the installed
+only when vector input or output is requested (including configuring a vector output default)\&. Tk initialization is not required for vector measurements; the installed
 RBC binary must still have its own system library dependencies available\&.
 .PP
 With -data, measurement inputs are lists looked up in that dictionary, as before\&. Omit -data to interpret
@@ -151,9 +159,9 @@ not affect sample alignment\&. Supply at least two samples, or three for derivat
 .PP
 The wrapper passes names directly to C; it does not extract the full vectors as lists\&. A shared read-only
 accessor serves both input types\&. RMS squares samples while reading, before interpolation, matching the list
-implementation without creating a temporary vector\&. Inputs are not modified\&. Returned values retain the
-existing scalar, list and dictionary forms, including -between, -integ -cum and -cross all; no result
-vectors are created\&. Existing interpolation and measurement semantics are unchanged\&.
+implementation without creating a temporary vector\&. Returned values retain their existing forms by default\&.
+-between and cumulative integration additionally support vector output; -cross all and scalar measurements
+retain their existing result types\&. Interpolation and measurement semantics are unchanged\&.
 .PP
 The internal C commands retain their original list signatures\&. Their Vectors counterparts use the same
 arguments with vector names in the data positions; unused FindDerivWhenVectors inputs remain empty strings\&.
@@ -170,6 +178,62 @@ Any OS that has tcl9\&.0 (Linux, Windows, FreeBSD)\&.
 .PP
 You can find some documentation \fIhere\fP [URL: https://georgtree\&.github\&.io/tclmeasure]\&. Also on Linux you can open manpages
 installed after run of make install\&.
+.SH "VECTOR OUTPUT AND PACKAGE DEFAULTS"
+.PP
+-between and -integ {\&.\&.\&. -cum} accept the outer option -output vector\&. Their result remains a dictionary
+with x and y keys, but each value is a fully qualified real RBC vector name\&. Both list and vector inputs
+support either output representation\&. Other measurement results are unchanged by -output, including a global
+vector default\&.
+.PP
+.RS 4n
+.nf
+set data [dict create time {0 1 2 3} current {0 2 4 6}]
+set result [::tclmeasure::measure -data $data -xname time \\
+    -between {-vec current -from 0\&.5 -to 2\&.5} -output vector \\
+    -namespace ::results -names {x clippedTime y #auto}]
+[dict get $result y] range 0 end
+# -> 1\&.0 2\&.0 4\&.0 5\&.0
+rbc::vector destroy {*}[dict values $result]
+
+set saved [::tclmeasure::configure]
+::tclmeasure::configure -output vector -ifexists replace
+set integral [::tclmeasure::measure -data $data -xname time \\
+    -integ {-vec current -cum} -namespace ::results -names {x integralTime y integral}]
+::tclmeasure::configure {*}$saved
+rbc::vector destroy {*}[dict values $integral]
+.fi
+.RE
+.PP
+configure is public but not namespace-exported\&. With no arguments it returns
+-output list -ifexists error initially; with one option it returns that option's value\&. Updates are atomic,
+interpreter-local and support unambiguous option prefixes and -help\&. Per-call options override defaults\&.
+There is no -input setting: supplying -data continues to select list input; omitting it selects vector input\&.
+.PP
+.nf
+┌─────────────────────────┬─────────────────────────────────────────────────────────────────────────────┐
+│ Option                  │ Meaning                                                                     │
+├─────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+│ -output list|vector     │ Representation of the two supported x/y results\&.                            │
+│ -names dictionary       │ Destination names for x and/or y; omitted entries use #auto\&.                │
+│ -name name              │ Shorthand for the y destination; cannot also specify -names {y \&.\&.\&.}\&.        │
+│ -namespace name         │ Destination namespace, relative to the caller; missing parents are created\&. │
+│ -ifexists error|replace │ Reject collisions, or update existing writable real vectors in place\&.       │
+└─────────────────────────┴─────────────────────────────────────────────────────────────────────────────┘
+
+.fi
+.PP
+Without -namespace, relative destinations use the caller's namespace\&. Fully qualified names override the
+selected namespace; their parent namespace must exist\&. #auto (also namespace::#auto) uses RBC's allocator;
+auto is an ordinary name\&. Explicit names are literal, including parentheses\&. Empty names/namespaces,
+unknown fields and duplicate destinations are rejected\&. Naming options require an eligible vector result\&.
+No mapped array variable is created\&. The caller owns the vectors and must destroy them when no longer needed\&.
+.PP
+Replacement retains existing vector commands and graph clients\&. Complex or read-only vectors, aliases and
+unrelated commands cannot be replaced\&. Both results are computed and copied before publication, making reuse
+of input vectors as destinations safe\&. New vectors are removed on publication failure; already replaced
+existing vectors are not rolled back if an application notification callback causes a later failure\&.
+The current numerical kernels still produce their usual result lists internally; C publishes numeric copies
+through RBC's API without Tcl loops over individual samples\&.
 .SH "INSTALLATION LAYOUT AND REMOVAL"
 .PP
 Installation follows the rbc-tk9 layout and honors the directories selected by configure:
@@ -259,19 +323,58 @@ bare selectors still require their normal values\&.
 .SH COMMANDS
 .PP
 .RS -4n
+\fBconfigure\fR (::tclmeasure)
+.RE
+.PP
+Queries or changes package-wide output defaults in this Tcl interpreter\&.
+.RS 4n
+\fBconfigure\fP \fI?option?\fP
+.br
+\fBconfigure\fP \fI?-output list|vector? ?-ifexists error|replace?\fP
+.br
+.RE
+.PP
+\fBParameters\fR
+.RS 4n
+.TP
+-ifexists policy
+Default vector collision policy: error or replace; initially error\&.
+.TP
+-output mode
+Default representation for -between and cumulative integration: list or vector; initially list\&.
+.RE
+.PP
+\fBDescription\fR
+.PP
+With no arguments, returns the complete option/value dictionary\&. With one option, returns its value\&.
+Updates validate every option before changing any defaults\&. Selecting vector output requires an RBC-enabled
+build and a loadable RBC vector package\&. Per-measurement options override these defaults\&. Other measurement
+results are unchanged\&. Input selection remains automatic: -data selects lists; omitting it selects vectors\&.
+This command is not namespace-exported; call it as ::tclmeasure::configure\&.
+.PP
+\fBReturn value\fR
+.PP
+The queried value, or the complete configuration dictionary\&.
+.PP
+.RS -4n
 \fBmeasure\fR (::tclmeasure)
 .RE
 .PP
-Read-only RBC vectors are valid inputs; measurement never modifies or unlocks their storage\&.
+Read-only RBC vectors are valid inputs\&. Storage is changed only when explicitly used as an output destination;
+locked vectors cannot be replaced and are never unlocked\&.
 Does different measurements of input data lists or real RBC vectors\&.
 With -data, names select lists in the supplied dictionary\&. Without -data, names select RBC vector commands
 in the caller's namespace; direct vector support must be enabled at build time with --with-rbc\&.
 Vector names are passed directly to C without converting the samples to lists\&. All modes preserve their
-existing scalar/list/dictionary results and never create result vectors\&. Mapped array variables are optional\&.
+existing scalar/list/dictionary results by default\&. Mapped array variables are optional\&.
 Complex vectors are rejected\&. X must be strictly increasing and all inputs must have equal sample counts\&.
 Vector index offsets do not change sample alignment\&. Derivatives need at least three samples; other modes
 need at least two\&. See the installation page for optional RBC build and runtime dependencies\&.
 .RS 4n
+\fBmeasure\fP \fI-xname name ?-data dictionary? -between conditions ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?\fP
+.br
+\fBmeasure\fP \fI-xname name ?-data dictionary? -integ {-vec name -cum ?-from value? ?-to value?} ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?\fP
+.br
 \fBmeasure\fP \fI-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
 .br
 \fBmeasure\fP \fI-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}\fP
@@ -313,6 +416,9 @@ Contains conditions for deriv (see below), requires -when or -at\&.
 -find
 Contains conditions for find (see below), requires -when or -at\&.
 .TP
+-ifexists
+Error or replace for output vector collisions; defaults to the package configuration\&.
+.TP
 -max
 Contains conditions for finding maximum value in the interval\&.
 .TP
@@ -324,6 +430,18 @@ Contains conditions for finding minimum value in the interval\&.
 .TP
 -minat
 Contains conditions for finding time of minimum value in the interval\&.
+.TP
+-name
+Shorthand for the y output name; cannot be combined with the y entry in -names\&.
+.TP
+-names
+Dictionary mapping x and/or y to output vector names; omitted fields use #auto\&.
+.TP
+-namespace
+Vector destination namespace, relative to the caller; missing parents are created\&.
+.TP
+-output
+List or vector for -between and cumulative integration; defaults to the package configuration\&.
 .TP
 -pp
 Contains conditions for finding peak to peak value in the interval\&.
@@ -345,6 +463,34 @@ Name of x list in data dictionary, or RBC vector command when -data is omitted\&
 .RE
 .PP
 \fBDescription\fR
+.PP
+\fB\fBVector output\fP\fR
+.PP
+-between and -integ with nested -cum return dictionaries with x and y fields\&. With -output vector, the values
+are fully qualified real RBC vector command names instead of lists\&. All other modes keep their existing
+results, even with a global vector default\&. Input selection and output selection are independent\&.
+.PP
+Omitted names and #auto use RBC's own name allocator\&. auto without # is an ordinary literal name\&. Relative
+names use -namespace, or the caller's namespace when omitted\&. Fully qualified names override that namespace;
+their own parent namespace must already exist\&. Empty names/namespaces, unknown -names fields and duplicate
+destinations are errors\&. Naming options require vector output from one of the two supported forms\&.
+.PP
+Explicit names are literal, including parentheses, and no mapped array variable is created\&. The caller owns
+returned vectors\&. With replace, existing writable real vectors are updated in place, retaining graph clients\&.
+Other commands, aliases, complex vectors and read-only vectors cannot be replaced\&. All calculations finish
+before publication, so destinations may also be inputs\&. On failure, newly created vectors are removed;
+replacement of existing vectors is not transactional against application notification callbacks\&.
+.PP
+Example:
+.PP
+.RS 4n
+.nf
+set data [dict create time {0 1 2 3} current {0 2 4 6}]
+set result [measure -data $data -xname time -between {-vec current -from 0\&.5 -to 2\&.5} #                 -output vector -namespace ::results -names {x time y #auto}]
+set samples [[dict get $result y] range 0 end]
+rbc::vector destroy {*}[dict values $result]
+.fi
+.RE
 .PP
 This procedure imitates the \&.meas command from SPICE3 and Ngspice in particular\&. It has mutiple modes, and each
 mod could have different forms:
@@ -563,7 +709,7 @@ Start of the integration range, default is minimum value of x\&.
 End of the integration range, default is maximum value of x\&.
 .TP
 -cum
-Optional flag to return cumulative integration result list instead of thhe final value\&.
+Returns the cumulative x/y dictionary instead of the final scalar; values follow -output\&.
 .RE
 .PP
 Examples of usages:

@@ -45,9 +45,9 @@ if test "$rbc_dir" != no; then
         AC_MSG_ERROR([cannot find rbcVector.h, rbcDecls.h and rbcStubLib.c under $rbc_dir])
     fi
     TEA_ADD_INCLUDES([-I"${RBC_INCLUDE_DIR}"])
-    AC_DEFINE([HAVE_RBC], [1], [Build direct RBC vector input support])
+    AC_DEFINE([HAVE_RBC], [1], [Build RBC vector input and output support])
     AC_DEFINE([USE_RBC_STUBS], [1], [Use the RBC stubs interface])
-    AC_MSG_NOTICE([direct RBC vector input enabled: $RBC_INCLUDE_DIR])
+    AC_MSG_NOTICE([RBC vector input/output enabled: $RBC_INCLUDE_DIR])
 fi
 
 DOC_HTML_FILES="index.html objects.inv search.html searchindex.js genindex.html"
@@ -86,7 +86,7 @@ AC_SUBST([DOC_HTML_FILES])
 
 # Test files to include in the distribution.
 # Paths are relative to $srcdir.
-DIST_TEST_FILES="test/all.tcl test/tclmeasure.test"
+DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test"
 AC_SUBST([DIST_TEST_FILES])
 
 TEA_PUBLIC_TCL_HEADERS

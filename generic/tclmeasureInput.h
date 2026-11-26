@@ -1,7 +1,7 @@
 /*
  * tclmeasureInput.h --
  *
- *      Shared read-only input interface for lists and real RBC vectors.
+ *      Read-only input and completed-result publication interfaces for lists and real RBC vectors.
  *      Storage is borrowed for one synchronous command; no Tcl evaluation or
  *      event processing is permitted after opening the inputs.
  */
@@ -18,6 +18,7 @@ typedef struct {
 } MeasureInput;
 
 int MeasureVectorSupportCmd(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
+int MeasurePublishCmd(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 int MeasureInitVectors(Tcl_Interp *interp);
 int MeasureOpenInput(Tcl_Interp *interp, Tcl_Obj *obj, int vectors, MeasureInput *input);
 

@@ -47,11 +47,12 @@
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html">Content</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#installation-and-dependencies">Installation and dependencies</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#continuous-integration-and-binary-packages">Continuous integration and binary packages</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#optional-direct-rbc-vector-input">Optional direct RBC vector input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#optional-rbc-vector-support">Optional RBC vector support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#supported-platforms">Supported platforms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tclmeasure.html#documentation">Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#vector-output-and-package-defaults">Vector output and package defaults</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-layout-and-removal">Installation layout and removal</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#installation-archives">Installation archives</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tclmeasure.html#memory-regression-tests">Memory regression tests</a></li>
@@ -60,6 +61,7 @@
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">::tclmeasure</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configure"><code class="docutils literal notranslate"><span class="pre">configure</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#measure"><code class="docutils literal notranslate"><span class="pre">measure</span></code></a></li>
 </ul>
 </li>
@@ -96,18 +98,44 @@
 <span id="r-tclmeasure"></span><span id="r-3a3atclmeasure"></span><h1>::tclmeasure<a class="headerlink" href="#tclmeasure" title="Link to this heading"></a></h1>
 <section id="commands">
 <span id="r-tclmeasure-commands"></span><span id="r-3a3atclmeasureqzcommands"></span><h2>Commands<a class="headerlink" href="#commands" title="Link to this heading"></a></h2>
+<section id="configure">
+<span id="r-symbolqz3a3atclmeasure3a3aconfigure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">configure</span></code><a class="headerlink" href="#configure" title="Link to this heading"></a></h3>
+<p>Queries or changes package-wide output defaults in this Tcl interpreter.</p>
+<pre class="literal-block"><strong>configure</strong> <em>?option?</em>
+<strong>configure</strong> <em>?-output list|vector? ?-ifexists error|replace?</em></pre>
+<p class="rubric">Parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-ifexists</span> <span class="pre">policy</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Default vector collision policy: error or replace; initially error.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-output</span> <span class="pre">mode</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Default representation for -between and cumulative integration: list or vector; initially list.</p>
+</dd>
+</dl>
+<p class="rubric">Description</p>
+<p>With no arguments, returns the complete option/value dictionary. With one option, returns its value.
+Updates validate every option before changing any defaults. Selecting vector output requires an RBC-enabled
+build and a loadable RBC vector package. Per-measurement options override these defaults. Other measurement
+results are unchanged. Input selection remains automatic: -data selects lists; omitting it selects vectors.
+This command is not namespace-exported; call it as ::tclmeasure::configure.</p>
+<p class="rubric">Return value</p>
+<p>The queried value, or the complete configuration dictionary.</p>
+</section>
 <section id="measure">
-<span id="r-symbolqz3a3atclmeasure3a3ameasure"></span><span id="index-1"></span><span id="index-0"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading"></a></h3>
-<p>Read-only RBC vectors are valid inputs; measurement never modifies or unlocks their storage.
+<span id="r-symbolqz3a3atclmeasure3a3ameasure"></span><span id="index-3"></span><span id="index-2"></span><h3><code class="docutils literal notranslate"><span class="pre">measure</span></code><a class="headerlink" href="#measure" title="Link to this heading"></a></h3>
+<p>Read-only RBC vectors are valid inputs. Storage is changed only when explicitly used as an output destination;
+locked vectors cannot be replaced and are never unlocked.
 Does different measurements of input data lists or real RBC vectors.
 With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
 in the caller’s namespace; direct vector support must be enabled at build time with –with-rbc.
 Vector names are passed directly to C without converting the samples to lists. All modes preserve their
-existing scalar/list/dictionary results and never create result vectors. Mapped array variables are optional.
+existing scalar/list/dictionary results by default. Mapped array variables are optional.
 Complex vectors are rejected. X must be strictly increasing and all inputs must have equal sample counts.
 Vector index offsets do not change sample alignment. Derivatives need at least three samples; other modes
 need at least two. See the installation page for optional RBC build and runtime dependencies.</p>
-<pre class="literal-block"><strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
+<pre class="literal-block"><strong>measure</strong> <em>-xname name ?-data dictionary? -between conditions ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?</em>
+<strong>measure</strong> <em>-xname name ?-data dictionary? -integ {-vec name -cum ?-from value? ?-to value?} ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?</em>
+<strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
 <strong>measure</strong> <em>-xname value -data value -trig {-at value} -targ {-vec value -val value ?-td value? -cross|rise|fall value}</em>
 <strong>measure</strong> <em>-xname value -data value -trig {-vec value -val value ?-td value? -cross|rise|fall value} -targ {-at value}</em>
 <strong>measure</strong> <em>-xname value -data value ?-find|deriv value? -when {-vec value -val value ?-td value? ?-from value? ?-to value? -cross|rise|fall value}</em>
@@ -136,38 +164,73 @@ need at least two. See the installation page for optional RBC build and runtime 
 <dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-find</span></code><span class="colon">:</span></dt>
 <dd class="field-even"><p>Contains conditions for find (see below), requires -when or -at.</p>
 </dd>
-<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-max</span></code><span class="colon">:</span></dt>
-<dd class="field-odd"><p>Contains conditions for finding maximum value in the interval.</p>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-ifexists</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Error or replace for output vector collisions; defaults to the package configuration.</p>
 </dd>
-<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-maxat</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Contains conditions for finding time of maximum value in the interval.</p>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-max</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding maximum value in the interval.</p>
 </dd>
-<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-min</span></code><span class="colon">:</span></dt>
-<dd class="field-odd"><p>Contains conditions for finding minimum value in the interval.</p>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-maxat</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding time of maximum value in the interval.</p>
 </dd>
-<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-minat</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Contains conditions for finding time of minimum value in the interval.</p>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-min</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding minimum value in the interval.</p>
 </dd>
-<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-pp</span></code><span class="colon">:</span></dt>
-<dd class="field-odd"><p>Contains conditions for finding peak to peak value in the interval.</p>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-minat</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding time of minimum value in the interval.</p>
 </dd>
-<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-rms</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Contains conditions for finding root meas square value across the interval.</p>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-name</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Shorthand for the y output name; cannot be combined with the y entry in -names.</p>
 </dd>
-<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-targ</span></code><span class="colon">:</span></dt>
-<dd class="field-odd"><p>Contains conditions for target (see below), requires -trig.</p>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-names</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dictionary mapping x and/or y to output vector names; omitted fields use #auto.</p>
 </dd>
-<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-trig</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Contains conditions for trigger (see below), selects Trigger-Target measurement, requires -targ.</p>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-namespace</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Vector destination namespace, relative to the caller; missing parents are created.</p>
 </dd>
-<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-when</span></code><span class="colon">:</span></dt>
-<dd class="field-odd"><p>Contains conditions for when (see below)</p>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-output</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>List or vector for -between and cumulative integration; defaults to the package configuration.</p>
 </dd>
-<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-xname</span></code><span class="colon">:</span></dt>
-<dd class="field-even"><p>Name of x list in data dictionary, or RBC vector command when -data is omitted. This list must be strictly increaing without duplicate elements.</p>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-pp</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for finding peak to peak value in the interval.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-rms</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for finding root meas square value across the interval.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-targ</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for target (see below), requires -trig.</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-trig</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Contains conditions for trigger (see below), selects Trigger-Target measurement, requires -targ.</p>
+</dd>
+<dt class="field-even"><code class="docutils literal notranslate"><span class="pre">-when</span></code><span class="colon">:</span></dt>
+<dd class="field-even"><p>Contains conditions for when (see below)</p>
+</dd>
+<dt class="field-odd"><code class="docutils literal notranslate"><span class="pre">-xname</span></code><span class="colon">:</span></dt>
+<dd class="field-odd"><p>Name of x list in data dictionary, or RBC vector command when -data is omitted. This list must be strictly increaing without duplicate elements.</p>
 </dd>
 </dl>
 <p class="rubric">Description</p>
+<p class="rubric"><strong>Vector output</strong></p>
+<p>-between and -integ with nested -cum return dictionaries with x and y fields. With -output vector, the values
+are fully qualified real RBC vector command names instead of lists. All other modes keep their existing
+results, even with a global vector default. Input selection and output selection are independent.</p>
+<p>Omitted names and #auto use RBC’s own name allocator. auto without # is an ordinary literal name. Relative
+names use -namespace, or the caller’s namespace when omitted. Fully qualified names override that namespace;
+their own parent namespace must already exist. Empty names/namespaces, unknown -names fields and duplicate
+destinations are errors. Naming options require vector output from one of the two supported forms.</p>
+<p>Explicit names are literal, including parentheses, and no mapped array variable is created. The caller owns
+returned vectors. With replace, existing writable real vectors are updated in place, retaining graph clients.
+Other commands, aliases, complex vectors and read-only vectors cannot be replaced. All calculations finish
+before publication, so destinations may also be inputs. On failure, newly created vectors are removed;
+replacement of existing vectors is not transactional against application notification callbacks.</p>
+<p>Example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">set</span><span class="w"> </span>data<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>time<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="k">}</span><span class="w"> </span>current<span class="w"> </span><span class="k">{</span><span class="nv">0</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">6</span><span class="k">}]</span>
+<span class="k">set</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="nv">measure</span><span class="w"> </span><span class="o">-</span>data<span class="w"> </span><span class="nv">$data</span><span class="w"> </span><span class="o">-</span>xname<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>between<span class="w"> </span><span class="k">{</span><span class="nv">-vec</span><span class="w"> </span>current<span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mf">2.5</span><span class="k">}</span><span class="w"> </span><span class="err">#</span><span class="w">                 </span><span class="o">-</span>output<span class="w"> </span>vector<span class="w"> </span><span class="o">-</span>namespace<span class="w"> </span><span class="o">::</span>results<span class="w"> </span><span class="o">-</span>names<span class="w"> </span><span class="k">{</span><span class="nv">x</span><span class="w"> </span>time<span class="w"> </span>y<span class="w"> </span><span class="err">#</span>auto<span class="k">}]</span>
+<span class="k">set</span><span class="w"> </span>samples<span class="w"> </span><span class="k">[[</span><span class="nb">dict</span><span class="w"> </span>get<span class="w"> </span><span class="nv">$result</span><span class="w"> </span>y<span class="k">]</span><span class="w"> </span><span class="nv">range</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span>end<span class="k">]</span>
+<span class="nv">rbc</span><span class="o">::</span>vector<span class="w"> </span>destroy<span class="w"> </span><span class="k">{</span><span class="o">*</span><span class="k">}[</span><span class="nb">dict</span><span class="w"> </span>values<span class="w"> </span><span class="nv">$result</span><span class="k">]</span>
+</pre></div>
+</div>
 <p>This procedure imitates the .meas command from SPICE3 and Ngspice in particular. It has mutiple modes, and each
 mod could have different forms:</p>
 <p class="rubric"><strong>Trigger-Target</strong></p>
@@ -334,7 +397,7 @@ Examples of usages:</p>
 <dd class="field-odd"><p>End of the integration range, default is maximum value of x.</p>
 </dd>
 <dt class="field-even">-cum<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional flag to return cumulative integration result list instead of thhe final value.</p>
+<dd class="field-even"><p>Returns the cumulative x/y dictionary instead of the final scalar; values follow -output.</p>
 </dd>
 </dl>
 <p>Examples of usages:</p>

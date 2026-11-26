@@ -65,10 +65,10 @@ nmake /f makefile.vc test
 The test target adds the build directory to the package search path. Use `nmake /f makefile.vc install` to install
 the extension into the Tcl prefix, or `nmake /f makefile.vc dist-zip` to produce a distribution.
 
-## Optional direct RBC vector input
+## Optional RBC vector support
 
 The default build supports Tcl lists and does not need RBC headers or libraries. To enable direct real-vector
-input from [rbc-tk9](https://github.com/georgtree/rbc-tk9), build with Tcl 9 and the current RBC 0.8.1 API:
+input and vector output from [rbc-tk9](https://github.com/georgtree/rbc-tk9), build with Tcl 9 and the current RBC 0.8.1 API:
 
 ```bash
 ./configure --with-tcl=/path/to/tcl/lib --with-rbc=/path/to/rbc-tk9
@@ -80,11 +80,11 @@ make
 library is not linked into tclmeasure. Use matching RBC headers and runtime. `--without-rbc` explicitly selects
 the default list-only build. Run `make clean` when changing this option in an existing build directory.
 
-Read-only RBC vectors are accepted as inputs; tclmeasure never writes vector storage or changes the lock.
-No new read-only stubs are required, so the existing RBC runtime requirement is unchanged.
+Read-only RBC vectors are accepted as inputs. Output replacement requires writable real vectors;
+tclmeasure never unlocks a vector. Use RBC 0.8.1 or newer headers and runtime.
 
 Even an RBC-enabled build can load and process lists without RBC installed. The `rbc::vector` package is loaded
-only when vector input is requested. Tk initialization is not required for vector measurements; the installed
+only when vector input or output is requested (including configuring a vector output default). Tk initialization is not required for vector measurements; the installed
 RBC binary must still have its own system library dependencies available.
 
 With `-data`, measurement inputs are lists looked up in that dictionary, as before. Omit `-data` to interpret
@@ -108,9 +108,9 @@ not affect sample alignment. Supply at least two samples, or three for derivativ
 
 The wrapper passes names directly to C; it does not extract the full vectors as lists. A shared read-only
 accessor serves both input types. RMS squares samples while reading, before interpolation, matching the list
-implementation without creating a temporary vector. Inputs are not modified. Returned values retain the
-existing scalar, list and dictionary forms, including `-between`, `-integ -cum` and `-cross all`; no result
-vectors are created. Existing interpolation and measurement semantics are unchanged.
+implementation without creating a temporary vector. Returned values retain their existing forms by default.
+`-between` and cumulative integration additionally support vector output; `-cross all` and scalar measurements
+retain their existing result types. Interpolation and measurement semantics are unchanged.
 
 The internal C commands retain their original list signatures. Their `Vectors` counterparts use the same
 arguments with vector names in the data positions; unused `FindDerivWhenVectors` inputs remain empty strings.
@@ -129,6 +129,56 @@ Any OS that has tcl9.0 (Linux, Windows, FreeBSD).
 
 You can find some documentation [here](https://georgtree.github.io/tclmeasure). Also on Linux you can open manpages
 installed after run of `make install`.
+
+## Vector output and package defaults
+
+`-between` and `-integ {... -cum}` accept the outer option `-output vector`. Their result remains a dictionary
+with `x` and `y` keys, but each value is a fully qualified real RBC vector name. Both list and vector inputs
+support either output representation. Other measurement results are unchanged by `-output`, including a global
+vector default.
+
+```tcl
+set data [dict create time {0 1 2 3} current {0 2 4 6}]
+set result [::tclmeasure::measure -data $data -xname time \
+    -between {-vec current -from 0.5 -to 2.5} -output vector \
+    -namespace ::results -names {x clippedTime y #auto}]
+[dict get $result y] range 0 end
+# -> 1.0 2.0 4.0 5.0
+rbc::vector destroy {*}[dict values $result]
+
+set saved [::tclmeasure::configure]
+::tclmeasure::configure -output vector -ifexists replace
+set integral [::tclmeasure::measure -data $data -xname time \
+    -integ {-vec current -cum} -namespace ::results -names {x integralTime y integral}]
+::tclmeasure::configure {*}$saved
+rbc::vector destroy {*}[dict values $integral]
+```
+
+`configure` is public but not namespace-exported. With no arguments it returns
+`-output list -ifexists error` initially; with one option it returns that option's value. Updates are atomic,
+interpreter-local and support unambiguous option prefixes and `-help`. Per-call options override defaults.
+There is no `-input` setting: supplying `-data` continues to select list input; omitting it selects vector input.
+
+| Option | Meaning |
+| --- | --- |
+| `-output list|vector` | Representation of the two supported x/y results. |
+| `-names dictionary` | Destination names for `x` and/or `y`; omitted entries use `#auto`. |
+| `-name name` | Shorthand for the `y` destination; cannot also specify `-names {y ...}`. |
+| `-namespace name` | Destination namespace, relative to the caller; missing parents are created. |
+| `-ifexists error|replace` | Reject collisions, or update existing writable real vectors in place. |
+
+Without `-namespace`, relative destinations use the caller's namespace. Fully qualified names override the
+selected namespace; their parent namespace must exist. `#auto` (also `namespace::#auto`) uses RBC's allocator;
+`auto` is an ordinary name. Explicit names are literal, including parentheses. Empty names/namespaces,
+unknown fields and duplicate destinations are rejected. Naming options require an eligible vector result.
+No mapped array variable is created. The caller owns the vectors and must destroy them when no longer needed.
+
+Replacement retains existing vector commands and graph clients. Complex or read-only vectors, aliases and
+unrelated commands cannot be replaced. Both results are computed and copied before publication, making reuse
+of input vectors as destinations safe. New vectors are removed on publication failure; already replaced
+existing vectors are not rolled back if an application notification callback causes a later failure.
+The current numerical kernels still produce their usual result lists internally; C publishes numeric copies
+through RBC's API without Tcl loops over individual samples.
 
 ## Installation layout and removal
 

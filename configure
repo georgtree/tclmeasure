@@ -5471,8 +5471,8 @@ printf "%s\n" "#define HAVE_RBC 1" >>confdefs.h
 
 printf "%s\n" "#define USE_RBC_STUBS 1" >>confdefs.h
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: direct RBC vector input enabled: $RBC_INCLUDE_DIR" >&5
-printf "%s\n" "$as_me: direct RBC vector input enabled: $RBC_INCLUDE_DIR" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: RBC vector input/output enabled: $RBC_INCLUDE_DIR" >&5
+printf "%s\n" "$as_me: RBC vector input/output enabled: $RBC_INCLUDE_DIR" >&6;}
 fi
 
 DOC_HTML_FILES="index.html objects.inv search.html searchindex.js genindex.html"
@@ -5512,7 +5512,7 @@ fi
 
 # Test files to include in the distribution.
 # Paths are relative to $srcdir.
-DIST_TEST_FILES="test/all.tcl test/tclmeasure.test"
+DIST_TEST_FILES="test/all.tcl test/tclmeasure.test test/output.test"
 
 
 

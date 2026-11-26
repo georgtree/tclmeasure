@@ -6,6 +6,46 @@ namespace eval ::tclmeasure {
     namespace export measure
 }
 
+# Defaults are local to this interpreter; configure is deliberately not exported.
+namespace eval ::tclmeasure {
+    variable Defaults [dict create -output list -ifexists error]
+}
+
+proc ::tclmeasure::configure {args} {
+    # Queries or changes package-wide output defaults in this Tcl interpreter.
+    # -output mode - Default representation for -between and cumulative integration: list or vector; initially list.
+    # -ifexists policy - Default vector collision policy: error or replace; initially error.
+    #
+    # With no arguments, returns the complete option/value dictionary. With one option, returns its value.
+    # Updates validate every option before changing any defaults. Selecting vector output requires an RBC-enabled
+    # build and a loadable RBC vector package. Per-measurement options override these defaults. Other measurement
+    # results are unchanged. Input selection remains automatic: -data selects lists; omitting it selects vectors.
+    # This command is not namespace-exported; call it as ::tclmeasure::configure.
+    #
+    # Synopsis: ?option?
+    # Synopsis: ?-output list|vector? ?-ifexists error|replace?
+    # Returns: The queried value, or the complete configuration dictionary.
+    variable Defaults
+    if {([llength $args] == 1) && ([lindex $args 0] ne {-help})} {
+        set arguments [argparse -inline -help {Query package defaults.} {
+            {-output -key query -value -output -help {Query the default output representation}}
+            {-ifexists -key query -value -ifexists -help {Query the default collision policy}}
+        }]
+        return [dict get $Defaults [dict get $arguments query]]
+    }
+    set arguments [argparse -inline -help {Query or change package defaults atomically.} {
+        {-output= -enum {list vector} -help {Default representation for between and cumulative output}}
+        {-ifexists= -enum {error replace} -help {Default vector collision policy}}
+    }]
+    set next $Defaults
+    dict for {key value} $arguments {dict set next -$key $value}
+    if {[dict exists $arguments output] && ([dict get $arguments output] eq {vector})} {
+        VectorSupport
+    }
+    set Defaults $next
+    return $Defaults
+}
+
 proc ::tclmeasure::AliasesKeysCheck {arguments keys} {
     foreach key $keys {
         if {[dict exists $arguments $key]} {
@@ -55,25 +95,43 @@ proc ::tclmeasure::FromTo {argsDict xData vectors} {
 # Private argument definitions shared by measurement execution and interactive help.
 proc ::tclmeasure::MeasureDefinition {} {
     return {
+        {-output= -enum {list vector} -help {Output representation for -between and -integ with -cum}}
+        {-name= -help {Destination for the y output, or #auto; vector output only}}
+        {-names= -help {Dictionary mapping x and/or y to destination names or #auto; vector output only}}
+        {-namespace= -help {Output namespace relative to the caller; created if missing}}
+        {-ifexists= -enum {error replace} -help {Collision policy for output vectors}}
         {-xname= -required -help {Name of x list in data dictionary. This list must be strictly increaing without\
                                           duplicate elements}}
         {-data= -help {Dictionary of named lists; omit to use RBC vector command names}}
-        {-trig= -require targ -allow {data xname targ} -help {Conditions for trigger, selects Trigger-Target\
-                                                                      measurement}}
-        {-targ= -require trig -allow {data xname trig}  -help {Conditions for target}}
-        {-find= -allow {data xname when at} -help {Conditions for Find-When or Find-At mode}}
-        {-when= -allow {data xname find deriv} -help {Conditions for Find-When or Deriv-When modes}}
-        {-at= -type double -allow {data xname find deriv} -help {Time for Find-At or Deriv-At modes}}
-        {-integ= -allow {data xname} -help {Conditions for Integ mode}}
-        {-deriv= -allow {data xname deriv when at} -help {Conditions for Deriv-At mode}}
-        {-avg= -allow {data xname} -help {Conditions for finding average value across the interval}}
-        {-min= -allow {data xname} -help {Conditions for finding minimum value in the interval}}
-        {-max= -allow {data xname} -help {Conditions for finding maximum value in the interval}}
-        {-pp= -allow {data xname} -help {Conditions for finding peak to peak value in the interval}}
-        {-rms= -allow {data xname} -help {Conditions for finding root meas square value across the interval}}
-        {-minat= -allow {data xname} -help {Conditions for finding time of minimum value in the interval}}
-        {-maxat= -allow {data xname} -help {Conditions for finding time of maximum value in the interval}}
-        {-between= -allow {data xname} -help {Conditions for fetching data in the interval}}
+        {-trig= -require targ -allow {output name names namespace ifexists data xname targ}\
+                 -help {Conditions for trigger, selects Trigger-Target measurement}}
+        {-targ= -require trig -allow {output name names namespace ifexists data xname trig}\
+                 -help {Conditions for target}}
+        {-find= -allow {output name names namespace ifexists data xname when at} -help {Conditions for Find-When or\
+                                                                                                Find-At mode}}
+        {-when= -allow {output name names namespace ifexists data xname find deriv}\
+                 -help {Conditions for Find-When or Deriv-When modes}}
+        {-at= -type double -allow {output name names namespace ifexists data xname find deriv}\
+                 -help {Time for Find-At or Deriv-At modes}}
+        {-integ= -allow {output name names namespace ifexists data xname} -help {Conditions for Integ mode}}
+        {-deriv= -allow {output name names namespace ifexists data xname deriv when at} -help {Conditions for\
+                                                                                                       Deriv-At mode}}
+        {-avg= -allow {output name names namespace ifexists data xname} -help {Conditions for finding average value\
+                                                                                       across the interval}}
+        {-min= -allow {output name names namespace ifexists data xname} -help {Conditions for finding minimum value in\
+                                                                                       the interval}}
+        {-max= -allow {output name names namespace ifexists data xname} -help {Conditions for finding maximum value in\
+                                                                                       the interval}}
+        {-pp= -allow {output name names namespace ifexists data xname} -help {Conditions for finding peak to peak\
+                                                                                      value in the interval}}
+        {-rms= -allow {output name names namespace ifexists data xname} -help {Conditions for finding root meas square\
+                                                                                       value across the interval}}
+        {-minat= -allow {output name names namespace ifexists data xname} -help {Conditions for finding time of minimum\
+                                                                                         value in the interval}}
+        {-maxat= -allow {output name names namespace ifexists data xname} -help {Conditions for finding time of maximum\
+                                                                                         value in the interval}}
+        {-between= -allow {output name names namespace ifexists data xname} -help {Conditions for fetching data in the\
+                                                                                           interval}}
     }
 }
 
@@ -241,18 +299,23 @@ proc ::tclmeasure::MeasureHelp {arguments} {
     if {[info exists kind]} {
         set definition [ConditionDefinition $kind]
     }
+    if {{-between} in $selected || {-integ} in $selected} {
+        append synopsis { ?-output list|vector? ?-names dictionary? ?-name name? ?-namespace name?\
+                                  ?-ifexists error|replace?}
+    }
     puts "Usage: $synopsis"
     argparse -inline -helplevel 1 -help $detail $definition {-help}
     return 1
 }
 
 proc ::tclmeasure::measure {args} {
-    # Read-only RBC vectors are valid inputs; measurement never modifies or unlocks their storage.
+    # Read-only RBC vectors are valid inputs. Storage is changed only when explicitly used as an output destination;
+    # locked vectors cannot be replaced and are never unlocked.
     # Does different measurements of input data lists or real RBC vectors.
     # With -data, names select lists in the supplied dictionary. Without -data, names select RBC vector commands
     # in the caller's namespace; direct vector support must be enabled at build time with --with-rbc.
     # Vector names are passed directly to C without converting the samples to lists. All modes preserve their
-    # existing scalar/list/dictionary results and never create result vectors. Mapped array variables are optional.
+    # existing scalar/list/dictionary results by default. Mapped array variables are optional.
     # Complex vectors are rejected. X must be strictly increasing and all inputs must have equal sample counts.
     # Vector index offsets do not change sample alignment. Derivatives need at least three samples; other modes
     # need at least two. See the installation page for optional RBC build and runtime dependencies.
@@ -273,6 +336,42 @@ proc ::tclmeasure::measure {args} {
     #  -minat - contains conditions for finding time of minimum value in the interval
     #  -maxat - contains conditions for finding time of maximum value in the interval
     #  -between - contains conditions for fetching data in the interval
+    #  -output - list or vector for -between and cumulative integration; defaults to the package configuration.
+    #  -names - dictionary mapping x and/or y to output vector names; omitted fields use #auto.
+    #  -name - shorthand for the y output name; cannot be combined with the y entry in -names.
+    #  -namespace - vector destination namespace, relative to the caller; missing parents are created.
+    #  -ifexists - error or replace for output vector collisions; defaults to the package configuration.
+    #
+    # ###### **Vector output**
+    # -between and -integ with nested -cum return dictionaries with x and y fields. With -output vector, the values
+    # are fully qualified real RBC vector command names instead of lists. All other modes keep their existing
+    # results, even with a global vector default. Input selection and output selection are independent.
+    #
+    # Omitted names and #auto use RBC's own name allocator. auto without # is an ordinary literal name. Relative
+    # names use -namespace, or the caller's namespace when omitted. Fully qualified names override that namespace;
+    # their own parent namespace must already exist. Empty names/namespaces, unknown -names fields and duplicate
+    # destinations are errors. Naming options require vector output from one of the two supported forms.
+    #
+    # Explicit names are literal, including parentheses, and no mapped array variable is created. The caller owns
+    # returned vectors. With replace, existing writable real vectors are updated in place, retaining graph clients.
+    # Other commands, aliases, complex vectors and read-only vectors cannot be replaced. All calculations finish
+    # before publication, so destinations may also be inputs. On failure, newly created vectors are removed;
+    # replacement of existing vectors is not transactional against application notification callbacks.
+    #
+    # Example:
+    # ```tcl
+    # set data [dict create time {0 1 2 3} current {0 2 4 6}]
+    # set result [measure -data $data -xname time -between {-vec current -from 0.5 -to 2.5}\
+    #                 -output vector -namespace ::results -names {x time y #auto}]
+    # set samples [[dict get $result y] range 0 end]
+    # rbc::vector destroy {*}[dict values $result]
+    # ```
+    #
+    # Synopsis: -xname name ?-data dictionary? -between conditions ?-output list|vector? ?-name name?
+    # ?-names dictionary? ?-namespace name? ?-ifexists error|replace?
+    # Synopsis: -xname name ?-data dictionary? -integ \{-vec name -cum ?-from value? ?-to value?\}
+    # ?-output list|vector? ?-name name? ?-names dictionary? ?-namespace name? ?-ifexists error|replace?
+    #
     # This procedure imitates the .meas command from SPICE3 and Ngspice in particular. It has mutiple modes, and each
     #  mod could have different forms:
     #  ###### **Trigger-Target**
@@ -420,7 +519,7 @@ proc ::tclmeasure::measure {args} {
     #  -vec - key in data dictionary, or RBC vector command when -data is omitted
     #  -from - start of the integration range, default is minimum value of x.
     #  -to - end of the integration range, default is maximum value of x.
-    #  -cum - optional flag to return cumulative integration result list instead of thhe final value
+    #  -cum - returns the cumulative x/y dictionary instead of the final scalar; values follow -output.
     # Examples of usages:
     # ```tcl
     # measure -xname x -data [dict create x $x y1 $y1 y2 $y2] -avg {-vec y1 -from 1 -to 5}
@@ -443,6 +542,24 @@ proc ::tclmeasure::measure {args} {
                             forms: Trigger-Target, Find-When, Deriv-When, Find-At, Deriv-At,\
                             Avg|Rms|Min|Max|PP|MinAt|MaxAt|Between and Integ. See documentation for further details}\
                             [MeasureDefinition]
+    variable Defaults
+    if {![info exists output]} {set output [dict get $Defaults -output]}
+    if {![info exists ifexists]} {set ifexists [dict get $Defaults -ifexists]}
+    set sequence [info exists between]
+    if {[info exists integ]} {
+        set integArgs [argparse -inline [ConditionDefinition integ] $integ]
+        set sequence [dict get $integArgs cum]
+    }
+    set outputOptions [dict create ifexists $ifexists]
+    foreach key {name names namespace} {
+        if {[info exists $key]} {
+            if {!$sequence || $output ne {vector}} {
+                return -code error "-$key requires vector output from -between or -integ with -cum"
+            }
+            dict set outputOptions $key [set $key]
+        }
+    }
+    if {$sequence && $output eq {vector}} {VectorSupport}
     set vectors [expr {![info exists data]}]
     set suffix {}
     if {$vectors} {
@@ -588,10 +705,13 @@ proc ::tclmeasure::measure {args} {
     } elseif {[info exists deriv] && [info exists at]} {
         return [::tclmeasure::DerivAt${suffix} $xData $at [InputData $data $deriv $vectors]]
     } elseif {[info exists integ]} {
-        set integArgs [argparse -inline [ConditionDefinition integ] $integ]
         FromTo $integArgs $xData $vectors
-        return [::tclmeasure::Integ${suffix} $xData [InputData $data [dict get $integArgs vec] $vectors] $from $to\
+        set result [::tclmeasure::Integ${suffix} $xData [InputData $data [dict get $integArgs vec] $vectors] $from $to\
                         [dict get $integArgs cum]]
+        if {$sequence && $output eq {vector}} {
+            return [uplevel 1 [list ::tclmeasure::NativePublish $result $outputOptions]]
+        }
+        return $result
     } elseif {[info exists avg]} {
         set avgArgs [argparse -inline [ConditionDefinition interval] $avg]
         FromTo $avgArgs $xData $vectors
@@ -626,8 +746,12 @@ proc ::tclmeasure::measure {args} {
         }
         set resDict [argparse -inline [ConditionDefinition extrema] $argsDict]
         FromTo $resDict $xData $vectors
-        return [::tclmeasure::MinMaxPPMinAtMaxAt${suffix} $xData [InputData $data [dict get $resDict vec] $vectors]\
-                        $from $to $type]
+        set result [::tclmeasure::MinMaxPPMinAtMaxAt${suffix} $xData [InputData $data [dict get $resDict vec] $vectors]\
+                            $from $to $type]
+        if {$type eq {between} && $output eq {vector}} {
+            return [uplevel 1 [list ::tclmeasure::NativePublish $result $outputOptions]]
+        }
+        return $result
     }
 }
 
